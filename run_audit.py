@@ -32,6 +32,16 @@ CALL_TIMEOUT = 60
 RATE_LIMIT_DELAY = 1.0
 
 
+def _avg_logprob(logprobs_data: list[dict] | None) -> float | None:
+    """Calcula el logprob promedio de la respuesta (señal de confianza/memorización)."""
+    if not logprobs_data:
+        return None
+    logprobs = [lp["logprob"] for lp in logprobs_data if "logprob" in lp]
+    if not logprobs:
+        return None
+    return round(sum(logprobs) / len(logprobs), 4)
+
+
 def _make_run_id(output_path: str) -> str:
     """Genera run_id secuencial basado en registros existentes."""
     date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
@@ -307,6 +317,8 @@ def _build_record(*, run_id, query_id, query_family, query_prompt, model_source,
             "input_tokens": result.input_tokens,
             "output_tokens": result.output_tokens,
         },
+        "logprobs": result.logprobs_data,
+        "avg_logprob": _avg_logprob(result.logprobs_data),
         "error": None,
     }
 

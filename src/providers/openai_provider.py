@@ -33,10 +33,28 @@ class OpenAIProvider(ProviderAdapter):
             messages=messages,
             temperature=temperature,
             max_tokens=max_output_tokens,
+            logprobs=True,
+            top_logprobs=3,
         )
         latency_ms = int((time.perf_counter() - t0) * 1000)
 
         choice = response.choices[0]
+
+        # Extract logprobs: list of {token, logprob, top_logprobs} per token
+        logprobs_data = None
+        if choice.logprobs and choice.logprobs.content:
+            logprobs_data = [
+                {
+                    "token": lp.token,
+                    "logprob": lp.logprob,
+                    "top_logprobs": [
+                        {"token": t.token, "logprob": t.logprob}
+                        for t in (lp.top_logprobs or [])
+                    ],
+                }
+                for lp in choice.logprobs.content
+            ]
+
         return ProviderResult(
             text=choice.message.content or "",
             input_tokens=response.usage.prompt_tokens if response.usage else None,
@@ -44,4 +62,5 @@ class OpenAIProvider(ProviderAdapter):
             provider_request_id=response.id,
             finish_reason=choice.finish_reason,
             latency_ms=latency_ms,
+            logprobs_data=logprobs_data,
         )

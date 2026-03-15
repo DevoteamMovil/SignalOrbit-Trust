@@ -168,7 +168,7 @@ Multi-model runner that sends identical prompts to **GPT-4.1**, **Gemini 2.5 Pro
 | **Share of Model Voice** | % of responses where the brand appears |
 | **Recommendation Win Rate** | % of times the brand is ranked #1 |
 | **Citation Source Mix** | Owned vs. earned vs. marketplace vs. UGC sources |
-| **Cross-Model Divergence** | How much models disagree on the same query |
+| **Memorization Divergence Index** | How much models disagree on the same query — a Membership Inference signal |
 | **GEO-to-SEO Delta** | Gap between AI visibility and Search Console performance |
 
 ### 2. Integrity Scanner (`scan_url.py`)
@@ -207,7 +207,7 @@ Imports Google Search Console data (API or CSV) to correlate classic SEO metrics
 ### 4. Trust Dashboard
 
 Unified Streamlit dashboard with two views:
-- **Discovery**: Share of Model Voice, Win Rate, Citations, Cross-Model heatmap
+- **Discovery**: Share of Model Voice, Win Rate, Citations, Memorization Divergence Index, Model Confidence (logprobs)
 - **Integrity**: Poisoning alerts, risk scores, MITRE tags, evidence viewer
 - **Trust Map**: Scatter plot of Visibility × Integrity Risk — brands with high visibility *and* high risk are suspicious
 

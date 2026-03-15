@@ -35,6 +35,7 @@ def get(key: str) -> ProviderResult | None:
             provider_request_id=data.get("provider_request_id"),
             finish_reason=data.get("finish_reason"),
             latency_ms=data.get("latency_ms", 0),
+            logprobs_data=data.get("logprobs_data"),
         )
     except (json.JSONDecodeError, KeyError, TypeError):
         return None
@@ -51,6 +52,7 @@ def put(key: str, result: ProviderResult) -> None:
         "provider_request_id": result.provider_request_id,
         "finish_reason": result.finish_reason,
         "latency_ms": result.latency_ms,
+        "logprobs_data": result.logprobs_data,
     }
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False)

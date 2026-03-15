@@ -2,7 +2,7 @@
 """SignalOrbit — Trust Dashboard.
 
 Dashboard unificado con tres secciones:
-1. Discovery: Share of Model Voice, Win Rate, Citation Mix, Cross-Model Divergence
+1. Discovery: Share of Model Voice, Win Rate, Citation Mix, Memorization Divergence Index
 2. Integrity: Risk Score, Poisoning Signals, IOCs, MITRE mapping
 3. Search Reality: Branded vs Non-Branded, GEO-to-SEO Gap
 
@@ -29,6 +29,7 @@ INTEGRITY_PATH = DATA_DIR / "integrity" / "integrity_events.jsonl"
 MOCK_INTEGRITY_PATH = MOCK_DIR / "mock_integrity_events.jsonl"
 GSC_PATH = DATA_DIR / "final" / "gsc_metrics.csv"
 MOCK_GSC_PATH = MOCK_DIR / "gsc_export.csv"
+RAW_RESPONSES_PATH = DATA_DIR / "raw" / "raw_responses.jsonl"
 
 
 # ─── Data loaders ──────────────────────────────────────────────────
@@ -90,6 +91,27 @@ def load_gsc(path: str) -> list[dict]:
                 pass
             rows.append(row)
     return rows
+
+
+@st.cache_data
+def load_raw_responses(path: str) -> list[dict]:
+    """Carga raw_responses.jsonl para extraer logprobs y avg_logprob."""
+    p = Path(path)
+    if not p.exists():
+        return []
+    records = []
+    with open(p, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rec = json.loads(line)
+                if rec.get("status") == "ok":
+                    records.append(rec)
+            except json.JSONDecodeError:
+                continue
+    return records
 
 
 # ─── KPI calculators ───────────────────────────────────────────────
@@ -275,15 +297,70 @@ def main():
                 pivot = pivot.sort_values("Total", ascending=False)
                 st.dataframe(pivot, use_container_width=True)
 
-            # Cross-model divergence
-            st.subheader("Cross-Model Divergence")
+            # Memorization Divergence Index (formerly Cross-Model Divergence)
+            st.subheader("Memorization Divergence Index")
+            st.caption(
+                "Measures how much models disagree on brand recommendations for the same query. "
+                "High divergence suggests different training data composition (Membership Inference signal). "
+                "Brands with consistently high rank across all models may indicate strong memorization."
+            )
             brand_by_model = defaultdict(dict)
             for r in rankings:
                 brand_by_model[r["brand"]][r["model"]] = r["mentions"]
             if len(brand_by_model) > 1:
+                import numpy as np
                 import pandas as pd
                 df_div = pd.DataFrame(brand_by_model).T.fillna(0)
-                st.bar_chart(df_div)
+
+                # Calculate per-brand divergence (coefficient of variation)
+                df_div["MDI"] = df_div.apply(
+                    lambda row: round(row.std() / row.mean() * 100, 1) if row.mean() > 0 else 0,
+                    axis=1,
+                )
+                df_div = df_div.sort_values("MDI", ascending=False)
+
+                # Display chart without MDI column
+                chart_cols = [c for c in df_div.columns if c != "MDI"]
+                st.bar_chart(df_div[chart_cols])
+
+                # Display MDI table
+                st.markdown("**MDI Score** (0 = identical across models, 100+ = high divergence)")
+                mdi_display = df_div[["MDI"]].copy()
+                mdi_display["Interpretation"] = mdi_display["MDI"].apply(
+                    lambda x: "Low divergence (consistent)" if x < 30
+                    else "Moderate divergence" if x < 60
+                    else "High divergence (possible MIA signal)"
+                )
+                st.dataframe(mdi_display, use_container_width=True)
+
+            # Model Confidence (logprobs) — only if raw_responses available
+            raw_records = load_raw_responses(str(RAW_RESPONSES_PATH))
+            logprob_records = [r for r in raw_records if r.get("avg_logprob") is not None]
+            if logprob_records:
+                st.subheader("Model Confidence (logprobs)")
+                st.caption(
+                    "Average log-probability per response. Higher values (closer to 0) indicate "
+                    "greater model confidence — a potential signal of training data memorization. "
+                    "Only available for OpenAI models (logprobs=True)."
+                )
+                import pandas as pd
+                lp_data = [
+                    {
+                        "query_id": r.get("query_id", ""),
+                        "model_source": r.get("model_source", "").replace(
+                            "openai_gpt_4_1", "GPT-4.1"
+                        ),
+                        "avg_logprob": r["avg_logprob"],
+                    }
+                    for r in logprob_records
+                ]
+                df_lp = pd.DataFrame(lp_data)
+                # Show avg by model
+                lp_by_model = df_lp.groupby("model_source")["avg_logprob"].mean().round(4)
+                lp_cols = st.columns(len(lp_by_model))
+                for i, (model, avg) in enumerate(lp_by_model.items()):
+                    lp_cols[i].metric(f"{model} avg logprob", f"{avg:.4f}")
+                st.dataframe(df_lp, use_container_width=True)
 
     # ═══ TAB 2: INTEGRITY ══════════════════════════════════════
     with tab2:
