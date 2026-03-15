@@ -1,0 +1,39 @@
+query_id,model_source,query_family,brand_domain,brand_present,name_raw,name_normalized,is_recommended,recommendation_rank,sentiment,citation_type,context,n_citations,owned_count,earned_count,marketplace_count,ugc_count
+q-travel-001,openai_gpt_4_1,informational,booking.com,True,Booking.com,booking.com,True,1,positive,owned,"Booking.com es una de las plataformas más completas para reservar alojamiento",3,1,1,1,0
+q-travel-001,openai_gpt_4_1,informational,booking.com,True,Airbnb,airbnb.com,True,2,positive,owned,"Airbnb es ideal si buscas apartamentos o experiencias locales",3,1,1,1,0
+q-travel-001,openai_gpt_4_1,informational,booking.com,True,Expedia,expedia.com,True,3,neutral,owned,"Expedia permite paquetes de vuelo+hotel combinados",3,1,1,1,0
+q-travel-001,google_gemini_2_5_pro,informational,booking.com,True,Airbnb,airbnb.com,True,1,positive,owned,"Airbnb destaca por ofrecer alojamientos únicos",2,1,1,0,0
+q-travel-001,google_gemini_2_5_pro,informational,booking.com,True,Booking.com,booking.com,True,2,positive,owned,"Booking.com tiene la mayor variedad de hoteles",2,1,1,0,0
+q-travel-001,anthropic_claude_sonnet_4_6,informational,booking.com,True,Booking.com,booking.com,True,1,positive,owned,"Recomiendo Booking.com por su amplia cobertura",2,1,0,1,0
+q-travel-001,anthropic_claude_sonnet_4_6,informational,booking.com,True,Airbnb,airbnb.com,True,2,positive,owned,"Airbnb es excelente para estancias más largas",2,1,0,1,0
+q-travel-002,openai_gpt_4_1,comparative,booking.com,True,Booking.com,booking.com,True,1,positive,owned,"Booking.com gana en variedad y política de cancelación",4,1,1,1,1
+q-travel-002,openai_gpt_4_1,comparative,booking.com,True,Airbnb,airbnb.com,True,2,positive,owned,"Airbnb ofrece precios más competitivos para grupos",4,1,1,1,1
+q-travel-002,openai_gpt_4_1,comparative,booking.com,True,Expedia,expedia.com,True,3,neutral,owned,"Expedia es útil para paquetes pero menos flexible",4,1,1,1,1
+q-travel-002,google_gemini_2_5_pro,comparative,booking.com,True,Booking.com,booking.com,True,1,positive,owned,"Booking.com es la opción más versátil",3,1,1,1,0
+q-travel-002,google_gemini_2_5_pro,comparative,booking.com,True,Airbnb,airbnb.com,True,2,positive,owned,"Airbnb sobresale en alojamientos no convencionales",3,1,1,1,0
+q-travel-002,anthropic_claude_sonnet_4_6,comparative,booking.com,True,Airbnb,airbnb.com,True,1,positive,owned,"Airbnb ofrece la mejor relación calidad-precio",3,1,1,0,1
+q-travel-002,anthropic_claude_sonnet_4_6,comparative,booking.com,True,Booking.com,booking.com,True,2,positive,owned,"Booking.com destaca en facilidad de cancelación",3,1,1,0,1
+q-crm-001,openai_gpt_4_1,informational,hubspot.com,True,HubSpot,hubspot.com,True,1,positive,owned,"HubSpot ofrece un CRM gratuito muy completo",3,1,1,0,1
+q-crm-001,openai_gpt_4_1,informational,hubspot.com,True,Salesforce,salesforce.com,True,2,positive,owned,"Salesforce es el líder enterprise pero más caro",3,1,1,0,1
+q-crm-001,openai_gpt_4_1,informational,hubspot.com,True,Pipedrive,pipedrive.com,True,3,positive,owned,"Pipedrive es ideal para equipos de ventas pequeños",3,1,1,0,1
+q-crm-001,google_gemini_2_5_pro,informational,hubspot.com,True,HubSpot,hubspot.com,True,1,positive,owned,"HubSpot es la mejor opción para pymes",2,1,1,0,0
+q-crm-001,google_gemini_2_5_pro,informational,hubspot.com,True,Zoho,zoho.com,True,2,positive,owned,"Zoho CRM es una alternativa económica",2,1,1,0,0
+q-crm-001,anthropic_claude_sonnet_4_6,informational,hubspot.com,True,Salesforce,salesforce.com,True,1,positive,owned,"Salesforce es el estándar de la industria",3,1,1,0,1
+q-crm-001,anthropic_claude_sonnet_4_6,informational,hubspot.com,True,HubSpot,hubspot.com,True,2,positive,owned,"HubSpot ofrece un plan gratuito muy capaz",3,1,1,0,1
+q-running-001,openai_gpt_4_1,informational,nike.com,True,Nike Pegasus,nike.com,True,1,positive,owned,"Nike Pegasus es la zapatilla más recomendada para principiantes",4,1,1,1,1
+q-running-001,openai_gpt_4_1,informational,nike.com,True,Asics Gel-Nimbus,asics.com,True,2,positive,owned,"Asics Gel-Nimbus ofrece excelente amortiguación",4,1,1,1,1
+q-running-001,openai_gpt_4_1,informational,nike.com,True,Hoka Clifton,hoka.com,True,3,positive,owned,"Hoka Clifton destaca por su ligereza",4,1,1,1,1
+q-running-001,openai_gpt_4_1,informational,nike.com,True,New Balance Fresh Foam,new-balance.com,True,4,positive,owned,"New Balance Fresh Foam es muy versátil",4,1,1,1,1
+q-running-001,google_gemini_2_5_pro,informational,nike.com,True,Asics,asics.com,True,1,positive,owned,"Asics lidera en tecnología de amortiguación",3,1,1,1,0
+q-running-001,google_gemini_2_5_pro,informational,nike.com,True,Nike,nike.com,True,2,positive,owned,"Nike Pegasus es un clásico para todo tipo de corredor",3,1,1,1,0
+q-running-001,google_gemini_2_5_pro,informational,nike.com,True,Hoka,hoka.com,True,3,positive,owned,"Hoka ha revolucionado el mercado del running",3,1,1,1,0
+q-running-001,anthropic_claude_sonnet_4_6,informational,nike.com,True,Nike,nike.com,True,1,positive,owned,"Nike Pegasus 41 es ideal para principiantes",2,1,0,1,0
+q-running-001,anthropic_claude_sonnet_4_6,informational,nike.com,True,Asics,asics.com,True,2,positive,owned,"Asics Gel-Nimbus ofrece la mejor amortiguación del mercado",2,1,0,1,0
+q-running-002,openai_gpt_4_1,comparative,nike.com,True,Hoka Clifton,hoka.com,True,1,positive,owned,"Hoka Clifton gana en ligereza y confort diario",3,1,1,0,1
+q-running-002,openai_gpt_4_1,comparative,nike.com,True,Nike Pegasus,nike.com,True,2,positive,owned,"Nike Pegasus es el todoterreno más equilibrado",3,1,1,0,1
+q-running-002,openai_gpt_4_1,comparative,nike.com,True,Asics Gel-Nimbus,asics.com,True,3,positive,owned,"Asics Gel-Nimbus es el mejor en amortiguación pura",3,1,1,0,1
+q-running-002,google_gemini_2_5_pro,comparative,nike.com,True,Asics Gel-Nimbus,asics.com,True,1,positive,owned,"Gel-Nimbus 26 es la mejor para entrenamientos largos",2,1,1,0,0
+q-running-002,google_gemini_2_5_pro,comparative,nike.com,True,Nike Pegasus,nike.com,True,2,positive,owned,"Pegasus 41 es polivalente pero menos amortiguada",2,1,1,0,0
+q-running-002,anthropic_claude_sonnet_4_6,comparative,nike.com,True,Nike Pegasus,nike.com,True,1,positive,owned,"Nike Pegasus ofrece el mejor equilibrio global",3,1,1,0,1
+q-running-002,anthropic_claude_sonnet_4_6,comparative,nike.com,True,Hoka Clifton,hoka.com,True,2,positive,owned,"Hoka Clifton 9 es la más cómoda del test",3,1,1,0,1
+q-running-002,anthropic_claude_sonnet_4_6,comparative,nike.com,True,Asics Gel-Nimbus,asics.com,True,3,positive,owned,"Gel-Nimbus es la premium del grupo",3,1,1,0,1

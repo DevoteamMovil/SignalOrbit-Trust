@@ -1,0 +1,20 @@
+site,date,query,page,clicks,impressions,ctr,position,brand_class
+,2026-03-01,viaje a lisboa,https://booking.com/lisboa,320,4500,0.071,3.2,nonbrand
+,2026-03-01,booking lisboa hotel,https://booking.com/lisboa,180,950,0.189,1.8,brand
+,2026-03-01,airbnb lisboa apartamento,https://airbnb.com/lisboa,95,780,0.122,2.1,brand
+,2026-03-01,hoteles baratos lisboa,https://booking.com/lisboa-baratos,210,3800,0.055,4.5,nonbrand
+,2026-03-01,comparar booking airbnb,https://booking.com/vs-airbnb,45,620,0.073,5.2,brand
+,2026-03-01,escapada fin de semana oporto,https://booking.com/oporto,150,2100,0.071,3.8,nonbrand
+,2026-03-01,mejor crm pyme,https://hubspot.com/es/crm,280,3200,0.088,2.9,nonbrand
+,2026-03-01,hubspot precios,https://hubspot.com/es/pricing,420,1800,0.233,1.5,brand
+,2026-03-01,salesforce vs hubspot,https://hubspot.com/es/comparar,85,950,0.089,4.1,brand
+,2026-03-01,crm gratuito,https://hubspot.com/es/free,190,4100,0.046,5.8,nonbrand
+,2026-03-01,pipedrive opiniones,https://pipedrive.com/es,65,480,0.135,2.4,brand
+,2026-03-01,zapatillas running principiante,https://nike.com/running,340,5200,0.065,3.6,nonbrand
+,2026-03-01,nike pegasus opiniones,https://nike.com/pegasus,520,2800,0.186,1.4,brand
+,2026-03-01,mejores zapatillas correr 2026,https://nike.com/running-2026,180,4800,0.038,6.2,nonbrand
+,2026-03-01,asics gel nimbus vs nike pegasus,https://nike.com/vs-asics,70,890,0.079,4.8,brand
+,2026-03-01,hoka clifton review,https://hoka.com/clifton,95,1200,0.079,3.1,brand
+,2026-03-01,comprar zapatillas running baratas,https://nike.com/ofertas,250,6100,0.041,7.3,nonbrand
+,2026-03-01,adidas ultraboost 2026,https://adidas.com/ultraboost,110,1500,0.073,3.5,brand
+,2026-03-01,new balance fresh foam,https://newbalance.com/fresh-foam,88,980,0.09,2.8,brand
