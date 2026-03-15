@@ -14,6 +14,7 @@ class ProviderResult:
     finish_reason: str | None
     latency_ms: int
     raw_payload: dict | None = field(default=None, repr=False)
+    logprobs_data: list[dict] | None = field(default=None, repr=False)
 
 
 class ProviderAdapter(ABC):

@@ -9,10 +9,13 @@ AI_ASSISTANT_DOMAINS = [
     "perplexity.ai",
     "grok.com",
     "gemini.google.com",
+    "you.com",
+    "meta.ai",
+    "pi.ai",
 ]
 
 # Nombres de parámetros de URL que pueden contener prompts
-PROMPT_QUERY_PARAMS = ["q", "prompt"]
+PROMPT_QUERY_PARAMS = ["q", "prompt", "message", "query", "search"]
 
 # Keywords que indican intención de persistencia en memoria
 MEMORY_KEYWORDS = [
@@ -55,7 +58,7 @@ PERSISTENCE_PATTERNS = [
     ("siempre", "recomienda"),
 ]
 
-# Puntuación de riesgo
+# Puntuación de riesgo — Link analysis
 RISK_SCORING = {
     "ai_domain_detected": 30,
     "prompt_param_present": 20,
@@ -63,6 +66,27 @@ RISK_SCORING = {
     "max_keyword_score": 30,
     "persistence_instruction": 20,
 }
+
+# Puntuación de riesgo — Hidden content injection
+HIDDEN_CONTENT_SCORING = {
+    "hidden_element_base": 20,
+    "per_memory_keyword": 15,
+    "max_keyword_score": 40,
+    "persistence_instruction": 25,
+    "meta_tag_base": 15,
+}
+
+# Meta tags que los LLMs suelen procesar al resumir páginas
+SENSITIVE_META_NAMES = [
+    "description",
+    "og:description",
+    "twitter:description",
+    "ai-prompt",
+    "ai-instructions",
+    "robots",
+    "abstract",
+    "summary",
+]
 
 
 def get_risk_level(score: int) -> str:

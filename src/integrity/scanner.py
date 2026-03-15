@@ -14,9 +14,11 @@ from src.config.integrity import (
     MEMORY_KEYWORDS,
     PERSISTENCE_PATTERNS,
     RISK_SCORING,
+    HIDDEN_CONTENT_SCORING,
+    SENSITIVE_META_NAMES,
     get_risk_level,
 )
-from src.integrity.html_parser import extract_links_from_html
+from src.integrity.html_parser import extract_links_from_html, extract_hidden_content
 
 
 @dataclass
@@ -58,9 +60,11 @@ class IntegrityScanner:
         return self.scan_html(html, source_url=url)
 
     def scan_html(self, html: str, source_url: str) -> list[IntegrityEvent]:
-        """Analiza HTML ya descargado (útil para la extensión Chrome)."""
-        links = extract_links_from_html(html)
+        """Analiza HTML ya descargado: enlaces, contenido oculto y meta tags."""
         events = []
+
+        # Plane 1: Link analysis (original)
+        links = extract_links_from_html(html)
         for link in links:
             event = self._analyze_link(
                 href=link.href,
@@ -69,6 +73,20 @@ class IntegrityScanner:
             )
             if event:
                 events.append(event)
+
+        # Plane 2: Hidden content injection
+        hidden_contents, meta_contents = extract_hidden_content(html)
+        for hidden in hidden_contents:
+            event = self._analyze_hidden_content(hidden, source_url)
+            if event:
+                events.append(event)
+
+        # Plane 3: Meta tag injection
+        for meta in meta_contents:
+            event = self._analyze_meta_tag(meta, source_url)
+            if event:
+                events.append(event)
+
         return events
 
     def analyze_single_url(self, url: str) -> IntegrityEvent | None:
@@ -108,8 +126,8 @@ class IntegrityScanner:
         if not prompt_text:
             return None
 
-        # 4. Decodificar el prompt
-        decoded = urllib.parse.unquote_plus(prompt_text)
+        # 4. Decodificar el prompt (recursivo para evitar double-encoding evasion)
+        decoded = self._decode_recursive(prompt_text)
 
         # 5. Buscar keywords de memoria
         decoded_lower = decoded.lower()
@@ -175,6 +193,120 @@ class IntegrityScanner:
             evidence_type=evidence_type,
             link_text_or_context=link_text or "",
         )
+
+    def _analyze_hidden_content(self, hidden, source_page_url: str) -> IntegrityEvent | None:
+        """Analiza un fragmento de texto oculto en busca de keywords de manipulación."""
+        text_lower = hidden.text.lower()
+
+        # Buscar keywords de memoria
+        found_keywords = [kw for kw in MEMORY_KEYWORDS if kw.lower() in text_lower]
+
+        # Detectar instrucciones de persistencia
+        has_persistence = any(
+            p1.lower() in text_lower and p2.lower() in text_lower
+            for p1, p2 in PERSISTENCE_PATTERNS
+        )
+
+        if not found_keywords and not has_persistence:
+            return None
+
+        # Calcular risk score
+        score = HIDDEN_CONTENT_SCORING["hidden_element_base"]
+        keyword_score = min(
+            len(found_keywords) * HIDDEN_CONTENT_SCORING["per_memory_keyword"],
+            HIDDEN_CONTENT_SCORING["max_keyword_score"],
+        )
+        score += keyword_score
+        if has_persistence:
+            score += HIDDEN_CONTENT_SCORING["persistence_instruction"]
+        score = min(score, 100)
+
+        brand = self._extract_brand_hint(hidden.text)
+
+        mitre_atlas = ["AML.T0051"]  # Indirect Prompt Injection
+        if found_keywords or has_persistence:
+            mitre_atlas.append("AML.T0080")  # Memory Poisoning
+
+        return IntegrityEvent(
+            event_id=f"evt-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{uuid.uuid4().hex[:8]}",
+            scan_timestamp_utc=datetime.now(timezone.utc).isoformat(),
+            source_page_url=source_page_url,
+            detected_link_url="",
+            ai_target_domain="page_content",
+            query_param_name="",
+            decoded_prompt=hidden.text[:500],
+            memory_keywords_found=found_keywords,
+            persistence_instructions_found=has_persistence,
+            brand_mentioned_in_prompt=brand,
+            mitre_atlas_tags=mitre_atlas,
+            mitre_attack_tags=["T1027"],  # Obfuscated Files or Information
+            risk_score=score,
+            risk_level=get_risk_level(score),
+            evidence_type=f"hidden_text_{hidden.method}",
+            link_text_or_context=f"<{hidden.tag} {hidden.context}>",
+        )
+
+    def _analyze_meta_tag(self, meta, source_page_url: str) -> IntegrityEvent | None:
+        """Analiza un meta tag en busca de instrucciones de manipulación AI."""
+        # Solo analizar meta tags sensibles
+        meta_name_lower = meta.name.lower()
+        if meta_name_lower not in SENSITIVE_META_NAMES:
+            return None
+
+        content_lower = meta.content.lower()
+        found_keywords = [kw for kw in MEMORY_KEYWORDS if kw.lower() in content_lower]
+
+        has_persistence = any(
+            p1.lower() in content_lower and p2.lower() in content_lower
+            for p1, p2 in PERSISTENCE_PATTERNS
+        )
+
+        if not found_keywords and not has_persistence:
+            return None
+
+        score = HIDDEN_CONTENT_SCORING["meta_tag_base"]
+        keyword_score = min(
+            len(found_keywords) * HIDDEN_CONTENT_SCORING["per_memory_keyword"],
+            HIDDEN_CONTENT_SCORING["max_keyword_score"],
+        )
+        score += keyword_score
+        if has_persistence:
+            score += HIDDEN_CONTENT_SCORING["persistence_instruction"]
+        score = min(score, 100)
+
+        brand = self._extract_brand_hint(meta.content)
+
+        mitre_atlas = ["AML.T0051"]
+        if found_keywords or has_persistence:
+            mitre_atlas.append("AML.T0080")
+
+        return IntegrityEvent(
+            event_id=f"evt-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{uuid.uuid4().hex[:8]}",
+            scan_timestamp_utc=datetime.now(timezone.utc).isoformat(),
+            source_page_url=source_page_url,
+            detected_link_url="",
+            ai_target_domain="meta_tag",
+            query_param_name="",
+            decoded_prompt=meta.content[:500],
+            memory_keywords_found=found_keywords,
+            persistence_instructions_found=has_persistence,
+            brand_mentioned_in_prompt=brand,
+            mitre_atlas_tags=mitre_atlas,
+            mitre_attack_tags=["T1027"],
+            risk_score=score,
+            risk_level=get_risk_level(score),
+            evidence_type=f"meta_tag_{meta_name_lower}",
+            link_text_or_context=f'<meta name="{meta.name}" content="...">',
+        )
+
+    def _decode_recursive(self, text: str, max_rounds: int = 5) -> str:
+        """Decodifica URL-encoding recursivamente hasta estabilización."""
+        for _ in range(max_rounds):
+            decoded = urllib.parse.unquote_plus(text)
+            if decoded == text:
+                break
+            text = decoded
+        return text
 
     def _extract_brand_hint(self, prompt: str) -> str | None:
         """Intenta extraer una marca del prompt inyectado (heurística simple)."""
