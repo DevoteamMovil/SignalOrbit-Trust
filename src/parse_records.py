@@ -284,7 +284,7 @@ def main():
             continue
 
         # Determine brand_domain from prompt_pack or override
-        brand_domain = args.brand_domain or raw.get("brand_domain", "unknown")
+        brand_domain = args.brand_domain or raw.get("brand_domain", "") or "unknown"
 
         prompt = _build_parser_prompt(
             raw_response=raw["raw_response"],

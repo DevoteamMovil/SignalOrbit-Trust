@@ -167,6 +167,7 @@ def main():
         query_id = prompt_row["query_id"]
         prompt_text = prompt_row["prompt_text"]
         query_family = prompt_row.get("query_family", "")
+        brand_domain = prompt_row.get("brand_domain", "")
 
         for mk in model_keys:
             composite_key = f"{query_id}::{mk}"
@@ -199,6 +200,7 @@ def main():
                     max_output_tokens=max_output_tokens,
                     result=cached_result,
                     cache_hit=True,
+                    brand_domain=brand_domain,
                 )
                 append_record(args.output, record)
                 existing_keys.add(composite_key)
@@ -248,6 +250,7 @@ def main():
                     result=result,
                     cache_hit=False,
                     client_request_id=client_request_id,
+                    brand_domain=brand_domain,
                 )
                 append_record(args.output, record)
                 existing_keys.add(composite_key)
@@ -267,6 +270,7 @@ def main():
                     max_output_tokens=max_output_tokens,
                     error=str(e),
                     client_request_id=client_request_id,
+                    brand_domain=brand_domain,
                 )
                 append_record(args.output, error_record)
                 existing_keys.add(composite_key)
@@ -291,7 +295,7 @@ def main():
 
 def _build_record(*, run_id, query_id, query_family, query_prompt, model_source,
                   provider, provider_model_id, temperature, max_output_tokens,
-                  result, cache_hit, client_request_id=None):
+                  result, cache_hit, client_request_id=None, brand_domain=""):
     """Construye un registro JSONL para una respuesta exitosa."""
     return {
         "run_id": run_id,
@@ -300,6 +304,7 @@ def _build_record(*, run_id, query_id, query_family, query_prompt, model_source,
         "surface": "api",
         "query_prompt": query_prompt,
         "model_source": model_source,
+        "brand_domain": brand_domain,
         "provider": provider,
         "provider_model_id": provider_model_id,
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
@@ -325,7 +330,7 @@ def _build_record(*, run_id, query_id, query_family, query_prompt, model_source,
 
 def _build_error_record(*, run_id, query_id, query_family, query_prompt, model_source,
                         provider, provider_model_id, temperature, max_output_tokens,
-                        error, client_request_id=None):
+                        error, client_request_id=None, brand_domain=""):
     """Construye un registro JSONL para un error."""
     return {
         "run_id": run_id,
@@ -334,6 +339,7 @@ def _build_error_record(*, run_id, query_id, query_family, query_prompt, model_s
         "surface": "api",
         "query_prompt": query_prompt,
         "model_source": model_source,
+        "brand_domain": brand_domain,
         "provider": provider,
         "provider_model_id": provider_model_id,
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),

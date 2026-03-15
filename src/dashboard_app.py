@@ -21,14 +21,24 @@ import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
 
+from src.live_query import (
+    run_live_query, get_available_models, model_label as live_model_label,
+)
+
 # ─── Theme ────────────────────────────────────────────────────────
 PRIMARY_COLOR = "#8A2BE2"
 NEUTRAL_COLOR = "#F0F0F0"
 PURPLE_GRADIENT = ["#4B0082", "#8A2BE2", "#D8BFD8", "#E6E6FA"]
 MODEL_DISPLAY_MAP = {
     "openai_gpt_4_1": "GPT-4.1",
+    "openai_gpt_4_1_mini": "GPT-4.1 Mini",
+    "openai_gpt_4_1_nano": "GPT-4.1 Nano",
+    "openai_o4_mini": "o4-mini",
     "google_gemini_2_5_pro": "Gemini 2.5 Pro",
+    "google_gemini_2_5_flash": "Gemini 2.5 Flash",
+    "google_gemini_2_0_flash": "Gemini 2.0 Flash",
     "anthropic_claude_sonnet_4_6": "Claude Sonnet",
+    "anthropic_claude_haiku_3_5": "Claude Haiku 3.5",
     "xai_grok_3": "Grok 3",
 }
 
@@ -237,7 +247,7 @@ def main():
     st.sidebar.markdown("### System Controls")
 
     brand_domains = sorted(set(r.get("brand_domain", "") for r in data if r.get("brand_domain")))
-    selected_brand = st.sidebar.selectbox("Brand Scope", brand_domains if brand_domains else ["booking.com"])
+    selected_brand = st.sidebar.selectbox("Brand Scope", brand_domains if brand_domains else ["N/A"])
 
     models = sorted(set(r.get("model_source", "") for r in data if r.get("model_source")))
     selected_models = st.sidebar.multiselect("Models", models, default=models,
@@ -255,7 +265,7 @@ def main():
     ]
 
     # ── Tabs ──────────────────────────────────────────────────
-    tab1, tab2, tab3 = st.tabs(["Discovery", "Integrity", "Search Reality"])
+    tab1, tab2, tab3, tab4 = st.tabs(["Discovery", "Integrity", "Search Reality", "⚡ Live Explorer"])
 
     # ═══════════════════════════════════════════════════════════
     #  TAB 1 — DISCOVERY
@@ -685,6 +695,150 @@ def main():
                         margin=dict(t=60, b=60, l=60, r=60),
                     )
                     st.plotly_chart(fig_gap, use_container_width=True)
+
+
+    # ═══════════════════════════════════════════════════════════
+    #  TAB 4 — LIVE EXPLORER
+    # ═══════════════════════════════════════════════════════════
+    with tab4:
+        st.header("Live Query Explorer")
+        st.caption(
+            "Write any query in natural language and compare how different AI models respond. "
+            "Select models from multiple providers and see results side by side."
+        )
+
+        # ── Query input ───────────────────────────────────────
+        user_query = st.text_area(
+            "Your query",
+            placeholder=(
+                "Example: Organiza un fin de semana en Sevilla para dos personas. "
+                "Busca hoteles céntricos que acepten mascotas y tengan parking. "
+                "Recomienda restaurantes para comer/cenar y propón una ruta de visitas."
+            ),
+            height=120,
+            key="live_query_input",
+        )
+
+        # ── Model selection (grouped by provider) ─────────────
+        st.markdown("**Select models to compare:**")
+        available = get_available_models()
+        selected_live_models: list[str] = []
+
+        provider_cols = st.columns(len(available))
+        for i, (provider_group, model_keys) in enumerate(available.items()):
+            with provider_cols[i]:
+                st.markdown(f"**{provider_group}**")
+                for mk in model_keys:
+                    if st.checkbox(
+                        live_model_label(mk),
+                        value=True,
+                        key=f"live_model_{mk}",
+                    ):
+                        selected_live_models.append(mk)
+
+        # ── Parameters ────────────────────────────────────────
+        param_col1, param_col2 = st.columns(2)
+        with param_col1:
+            live_temp = st.slider(
+                "Temperature", 0.0, 1.0, 0.2, 0.05,
+                key="live_temperature",
+                help="Lower = more deterministic, higher = more creative.",
+            )
+        with param_col2:
+            live_max_tokens = st.slider(
+                "Max output tokens", 256, 4096, 1024, 128,
+                key="live_max_tokens",
+                help="Maximum length of each model's response.",
+            )
+
+        # ── Execute button ────────────────────────────────────
+        run_disabled = not user_query.strip() or not selected_live_models
+        if st.button(
+            "🚀 Compare Models",
+            type="primary",
+            disabled=run_disabled,
+            use_container_width=True,
+        ):
+            with st.spinner(f"Querying {len(selected_live_models)} models in parallel…"):
+                results = run_live_query(
+                    prompt=user_query.strip(),
+                    model_keys=selected_live_models,
+                    temperature=live_temp,
+                    max_output_tokens=live_max_tokens,
+                )
+            st.session_state["live_results"] = results
+
+        # ── Results display ───────────────────────────────────
+        if "live_results" in st.session_state and st.session_state["live_results"]:
+            results = st.session_state["live_results"]
+
+            # Summary metrics row
+            ok_results = [r for r in results if r["status"] == "ok"]
+            err_results = [r for r in results if r["status"] == "error"]
+
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Models queried", len(results))
+            m2.metric("Successful", len(ok_results))
+            avg_lat = (
+                round(sum(r["latency_ms"] for r in ok_results) / len(ok_results))
+                if ok_results else 0
+            )
+            m3.metric("Avg latency", f"{avg_lat:,} ms")
+
+            st.markdown("---")
+
+            # Comparison summary table (overview first)
+            st.subheader("Comparison Summary")
+            summary_data = []
+            for r in results:
+                summary_data.append({
+                    "Model": r["model_label"],
+                    "Status": "✅ OK" if r["status"] == "ok" else "❌ Error",
+                    "Latency (ms)": r["latency_ms"],
+                    "Input Tokens": str(r["input_tokens"]) if r["input_tokens"] is not None else "—",
+                    "Output Tokens": str(r["output_tokens"]) if r["output_tokens"] is not None else "—",
+                    "Response Length": len(r["text"]),
+                })
+            st.dataframe(
+                pd.DataFrame(summary_data),
+                use_container_width=True,
+                hide_index=True,
+            )
+
+            # Latency chart
+            if ok_results:
+                st.subheader("Latency Comparison")
+                lat_df = pd.DataFrame([
+                    {"Model": r["model_label"], "Latency (ms)": r["latency_ms"]}
+                    for r in ok_results
+                ])
+                fig_lat = px.bar(
+                    lat_df, x="Model", y="Latency (ms)",
+                    color_discrete_sequence=[PRIMARY_COLOR],
+                )
+                fig_lat.update_layout(**_transparent_layout(
+                    height=350, xaxis_title="", yaxis_title="ms",
+                ))
+                st.plotly_chart(fig_lat, use_container_width=True)
+
+            # Full-width model responses (expanders avoid column overlap)
+            st.markdown("---")
+            st.subheader("Model Responses")
+            for res in results:
+                is_ok = res["status"] == "ok"
+                icon = "✅" if is_ok else "❌"
+                header = f"{icon} {res['model_label']}"
+                if is_ok:
+                    header += (
+                        f"  —  ⏱ {res['latency_ms']:,} ms  ·  "
+                        f"📥 {res['input_tokens'] or '?'} in  ·  "
+                        f"📤 {res['output_tokens'] or '?'} out"
+                    )
+                with st.expander(header, expanded=True):
+                    if is_ok:
+                        st.markdown(res["text"])
+                    else:
+                        st.error(f"Error: {res['error']}")
 
 
 if __name__ == "__main__":
