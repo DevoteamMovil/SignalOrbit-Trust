@@ -54,7 +54,8 @@ def _transparent_layout(**extra) -> dict:
     base = dict(
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
-        margin=dict(t=40, b=40, l=40, r=40),
+        margin=dict(t=40, b=60, l=60, r=40),
+        font=dict(size=14),
     )
     base.update(extra)
     return base
@@ -305,6 +306,7 @@ def main():
                 )
                 fig_bar.update_layout(**_transparent_layout(
                     xaxis_title="", yaxis_title="Mentions", showlegend=False,
+                    height=420,
                 ))
                 st.plotly_chart(fig_bar, use_container_width=True)
 
@@ -313,42 +315,91 @@ def main():
                 st.subheader("Statistical Sentiment Profile")
                 brand_rows = df_filtered[df_filtered["name_normalized"] == selected_brand].copy()
                 if not brand_rows.empty and "sentiment" in brand_rows.columns:
-                    s_weights = {"positive": 1.0, "neutral": 0.5, "negative": 0.1, "mixed": 0.5}
-                    brand_rows["s_score"] = brand_rows["sentiment"].map(s_weights).fillna(0.5)
-                    radar = brand_rows.groupby("model_label")["s_score"].mean().reset_index()
-                    if not radar.empty:
-                        r_vals = radar["s_score"].tolist() + [radar["s_score"].iloc[0]]
-                        theta = radar["model_label"].tolist() + [radar["model_label"].iloc[0]]
-                        fig_radar = go.Figure(data=go.Scatterpolar(
-                            r=r_vals, theta=theta, fill="toself",
-                            line_color=PRIMARY_COLOR, fillcolor="rgba(138,43,226,0.4)",
+                    # Count sentiment occurrences per model
+                    all_sentiments = ["neutral", "positive", "mixed", "negative"]
+                    sent_counts = (
+                        brand_rows.groupby(["model_label", "sentiment"])
+                        .size()
+                        .reset_index(name="count")
+                    )
+                    model_colors = [PRIMARY_COLOR, "#D8BFD8", "#4B0082", "#E6E6FA"]
+                    fig_radar = go.Figure()
+                    for i, model in enumerate(sorted(sent_counts["model_label"].unique())):
+                        model_data = sent_counts[sent_counts["model_label"] == model]
+                        # Build values for each sentiment axis
+                        vals = []
+                        for s in all_sentiments:
+                            match = model_data[model_data["sentiment"] == s]
+                            vals.append(int(match["count"].iloc[0]) if not match.empty else 0)
+                        # Close the polygon
+                        vals_closed = vals + [vals[0]]
+                        theta_closed = [s.capitalize() for s in all_sentiments] + [all_sentiments[0].capitalize()]
+                        fig_radar.add_trace(go.Scatterpolar(
+                            r=vals_closed, theta=theta_closed,
+                            fill="toself", name=model,
+                            line_color=model_colors[i % len(model_colors)],
+                            fillcolor=f"rgba({','.join(str(int(model_colors[i % len(model_colors)].lstrip('#')[j:j+2], 16)) for j in (0,2,4))},0.25)",
                         ))
-                        fig_radar.update_layout(
-                            polar=dict(radialaxis=dict(visible=True, range=[0, 1], showticklabels=False)),
-                            showlegend=False, margin=dict(t=40, b=40),
-                        )
-                        st.plotly_chart(fig_radar, use_container_width=True)
-                    else:
-                        st.info("Insufficient sentiment data.")
+                    max_count = sent_counts["count"].max() if not sent_counts.empty else 1
+                    fig_radar.update_layout(
+                        polar=dict(
+                            radialaxis=dict(visible=True, range=[0, max_count + 1],
+                                            showticklabels=True, tickfont=dict(size=11)),
+                            angularaxis=dict(tickfont=dict(size=14)),
+                        ),
+                        showlegend=True,
+                        legend=dict(font=dict(size=12), orientation="h",
+                                    yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
+                        height=450,
+                        margin=dict(t=40, b=60, l=40, r=40),
+                    )
+                    st.plotly_chart(fig_radar, use_container_width=True)
                 else:
                     st.info("No sentiment data available for the current selection.")
 
             st.markdown("<br>", unsafe_allow_html=True)
             col_v3, col_v4 = st.columns(2)
 
-            # ▸ Cross-Model Consistency Heatmap
+            # ▸ Cross-Model Consistency (grouped bar)
             with col_v3:
                 st.subheader("Cross-Model Consistency")
-                heat_matrix = df_filtered.groupby(["model_label", "name_normalized"]).size().unstack(fill_value=0)
-                if not heat_matrix.empty:
-                    fig_heat = px.imshow(
-                        heat_matrix, text_auto=True,
-                        color_continuous_scale=["#FFFFFF", PRIMARY_COLOR],
+                consistency_df = (
+                    df_filtered.groupby(["model_label", "name_normalized"])
+                    .size()
+                    .reset_index(name="mentions")
+                )
+                if not consistency_df.empty:
+                    # Sort brands by total mentions descending
+                    brand_order = (
+                        consistency_df.groupby("name_normalized")["mentions"]
+                        .sum()
+                        .sort_values(ascending=True)
+                        .index.tolist()
                     )
-                    fig_heat.update_layout(**_transparent_layout())
-                    st.plotly_chart(fig_heat, use_container_width=True)
+                    n_brands = len(brand_order)
+                    bar_h = max(400, n_brands * 35 + 120)
+                    fig_consist = px.bar(
+                        consistency_df,
+                        y="name_normalized",
+                        x="mentions",
+                        color="model_label",
+                        barmode="group",
+                        orientation="h",
+                        color_discrete_sequence=[PRIMARY_COLOR, "#D8BFD8"],
+                        category_orders={"name_normalized": brand_order},
+                        text="mentions",
+                    )
+                    fig_consist.update_layout(**_transparent_layout(
+                        height=bar_h,
+                        xaxis=dict(title="Mentions", tickfont=dict(size=12)),
+                        yaxis=dict(title="", tickfont=dict(size=13)),
+                        legend=dict(title="", font=dict(size=13), orientation="h",
+                                    yanchor="bottom", y=1.02, xanchor="center", x=0.5),
+                    ))
+                    fig_consist.update_traces(textposition="outside", textfont_size=12)
+                    st.plotly_chart(fig_consist, use_container_width=True)
                 else:
-                    st.info("Insufficient data for consistency matrix.")
+                    st.info("Insufficient data for consistency chart.")
 
             # ▸ Citation Source Mix (Donut)
             with col_v4:
@@ -361,7 +412,8 @@ def main():
                         cit_df, values="pct", names="type", hole=0.6,
                         color_discrete_sequence=PURPLE_GRADIENT,
                     )
-                    fig_pie.update_layout(**_transparent_layout())
+                    fig_pie.update_layout(**_transparent_layout(height=420))
+                    fig_pie.update_traces(textfont_size=14)
                     st.plotly_chart(fig_pie, use_container_width=True)
                 else:
                     st.info("No citation mix data.")
@@ -388,13 +440,24 @@ def main():
                 df_div = df_div.sort_values("MDI", ascending=False)
 
                 # Heatmap for MDI
+                n_brands = len(df_div)
+                mdi_h = max(400, n_brands * 45 + 140)
+                mdi_data = df_div[model_cols]
                 fig_mdi = px.imshow(
-                    df_div[model_cols],
+                    mdi_data.values,
                     text_auto=True,
+                    x=list(mdi_data.columns),
+                    y=list(mdi_data.index),
                     color_continuous_scale=["#FFFFFF", "#4B0082"],
-                    labels=dict(color="Mentions"),
+                    labels=dict(x="Model", y="Brand", color="Mentions"),
+                    aspect="auto",
                 )
-                fig_mdi.update_layout(**_transparent_layout())
+                fig_mdi.update_layout(**_transparent_layout(
+                    height=mdi_h,
+                    xaxis=dict(title="", tickfont=dict(size=14), side="bottom"),
+                    yaxis=dict(title="", tickfont=dict(size=13)),
+                ))
+                fig_mdi.update_traces(textfont=dict(size=15))
                 st.plotly_chart(fig_mdi, use_container_width=True)
 
                 # MDI scores table
@@ -504,7 +567,9 @@ def main():
                     dc_df = pd.DataFrame({"domain": domain_counts.keys(), "count": domain_counts.values()})
                     fig_dc = px.bar(dc_df, x="domain", y="count",
                                     color_discrete_sequence=[PRIMARY_COLOR])
-                    fig_dc.update_layout(**_transparent_layout(xaxis_title="", yaxis_title="Events"))
+                    fig_dc.update_layout(**_transparent_layout(
+                        xaxis_title="", yaxis_title="Events", height=400,
+                    ))
                     st.plotly_chart(fig_dc, use_container_width=True)
 
             # MITRE ATLAS mapping (Plotly bar)
@@ -525,7 +590,9 @@ def main():
                     ])
                     fig_mitre = px.bar(mitre_df, x="label", y="count",
                                        color_discrete_sequence=PURPLE_GRADIENT)
-                    fig_mitre.update_layout(**_transparent_layout(xaxis_title="", yaxis_title="Events"))
+                    fig_mitre.update_layout(**_transparent_layout(
+                        xaxis_title="", yaxis_title="Events", height=400,
+                    ))
                     st.plotly_chart(fig_mitre, use_container_width=True)
 
     # ═══════════════════════════════════════════════════════════
@@ -562,7 +629,8 @@ def main():
                 })
                 fig_bn = px.pie(bn_df, values="pct", names="type", hole=0.6,
                                 color_discrete_sequence=[PRIMARY_COLOR, NEUTRAL_COLOR])
-                fig_bn.update_layout(**_transparent_layout())
+                fig_bn.update_layout(**_transparent_layout(height=420))
+                fig_bn.update_traces(textfont_size=14)
                 st.plotly_chart(fig_bn, use_container_width=True)
 
             # Top queries
@@ -608,8 +676,13 @@ def main():
                         fillcolor="rgba(138,43,226,0.3)",
                     ))
                     fig_gap.update_layout(
-                        polar=dict(radialaxis=dict(visible=True, showticklabels=True)),
-                        showlegend=True, margin=dict(t=40, b=40),
+                        polar=dict(
+                            radialaxis=dict(visible=True, showticklabels=True, tickfont=dict(size=12)),
+                            angularaxis=dict(tickfont=dict(size=14)),
+                        ),
+                        showlegend=True,
+                        height=480,
+                        margin=dict(t=60, b=60, l=60, r=60),
                     )
                     st.plotly_chart(fig_gap, use_container_width=True)
 
