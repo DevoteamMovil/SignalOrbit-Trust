@@ -1,0 +1,35 @@
+query_id,model_source,query_family,brand_domain,brand_present,name_raw,name_normalized,is_recommended,recommendation_rank,sentiment,citation_type,context,n_citations,owned_count,earned_count,marketplace_count,ugc_count
+q-travel-001,openai_gpt_4_1,informational,booking.com,True,Skyscanner,skyscanner.com,True,1,positive,owned,Vuelos: - Skyscanner,13,13,0,0,0
+q-travel-001,openai_gpt_4_1,informational,booking.com,True,Google Flights,google flights,True,2,positive,owned,Vuelos: - Google Flights,13,13,0,0,0
+q-travel-001,openai_gpt_4_1,informational,booking.com,True,Booking.com,booking.com,True,3,positive,owned,Alojamiento: - Booking.com (gran variedad y opciones con cancelación gratuita),13,13,0,0,0
+q-travel-001,openai_gpt_4_1,informational,booking.com,True,Airbnb,airbnb.com,True,4,positive,owned,Alojamiento: - Airbnb (apartamentos céntricos a buen precio),13,13,0,0,0
+q-travel-001,openai_gpt_4_1,informational,booking.com,True,Hotels.com,hotels.com,True,5,positive,owned,Alojamiento: - Hotels.com,13,13,0,0,0
+q-travel-001,openai_gpt_4_1,informational,booking.com,True,Uber,uber,True,6,positive,owned,Traslados aeropuerto-centro: - Uber (muy usado en Lisboa),13,13,0,0,0
+q-travel-001,openai_gpt_4_1,informational,booking.com,True,Aerobús Lisboa,aerobús lisboa,True,7,positive,owned,Traslados aeropuerto-centro: - Aerobús Lisboa,13,13,0,0,0
+q-travel-001,openai_gpt_4_1,informational,booking.com,True,GetYourGuide,getyourguide,True,8,positive,owned,Entradas y actividades: - GetYourGuide,13,13,0,0,0
+q-travel-001,openai_gpt_4_1,informational,booking.com,True,Civitatis,civitatis,True,9,positive,owned,Entradas y actividades: - Civitatis,13,13,0,0,0
+q-travel-001,openai_gpt_4_1,informational,booking.com,True,Tiqets,tiqets,True,10,positive,owned,Entradas y actividades: - Tiqets,13,13,0,0,0
+q-travel-001,openai_gpt_4_1,informational,booking.com,True,Viva Viagem Card,viva viagem card,True,11,positive,owned,"Transporte público: - Viva Viagem Card (tarjeta recargable para metro, tranvía y bus)",13,13,0,0,0
+q-travel-001,openai_gpt_4_1,informational,booking.com,True,IATI Seguros,iati seguros,True,12,positive,owned,Seguro de viaje: - IATI Seguros,13,13,0,0,0
+q-travel-001,openai_gpt_4_1,informational,booking.com,True,Chapka,chapka,True,13,positive,owned,Seguro de viaje: - Chapka,13,13,0,0,0
+q-travel-001,anthropic_claude_sonnet_4_6,informational,booking.com,True,Booking.com,booking.com,True,1,positive,unknown,Dónde reservar: - Booking.com → mejor variedad y cancelación gratuita,0,0,0,0,0
+q-travel-001,anthropic_claude_sonnet_4_6,informational,booking.com,True,Airbnb,airbnb.com,True,2,positive,unknown,Dónde reservar: - Airbnb → para apartamentos con encanto,0,0,0,0,0
+q-travel-001,anthropic_claude_sonnet_4_6,informational,booking.com,True,Hotels.com,hotels.com,True,3,positive,unknown,Dónde reservar: - Hotels.com → acumulas noches gratis,0,0,0,0,0
+q-travel-001,anthropic_claude_sonnet_4_6,informational,booking.com,True,Skyscanner,skyscanner.com,True,4,positive,unknown,Vuelos - Skyscanner o Google Flights para comparar,0,0,0,0,0
+q-travel-001,anthropic_claude_sonnet_4_6,informational,booking.com,True,Google Flights,google flights,True,5,positive,unknown,Vuelos - Skyscanner o Google Flights para comparar,0,0,0,0,0
+q-travel-001,anthropic_claude_sonnet_4_6,informational,booking.com,True,Vueling,vueling,True,6,neutral,unknown,"Vuelos - Vueling, Iberia, TAP Air Portugal desde España",0,0,0,0,0
+q-travel-001,anthropic_claude_sonnet_4_6,informational,booking.com,True,Iberia,iberia,True,7,neutral,unknown,"Vuelos - Vueling, Iberia, TAP Air Portugal desde España",0,0,0,0,0
+q-travel-001,anthropic_claude_sonnet_4_6,informational,booking.com,True,TAP Air Portugal,tap air portugal,True,8,neutral,unknown,"Vuelos - Vueling, Iberia, TAP Air Portugal desde España",0,0,0,0,0
+q-travel-001,anthropic_claude_sonnet_4_6,informational,booking.com,True,Clube de Fado,clube de fado,True,9,positive,unknown,Reserva Fado: Web oficial de Clube de Fado o Tasca do Chico (reservar con antelación en su web directa),0,0,0,0,0
+q-travel-001,anthropic_claude_sonnet_4_6,informational,booking.com,True,Tasca do Chico,tasca do chico,True,10,positive,unknown,Reserva Fado: Web oficial de Clube de Fado o Tasca do Chico (reservar con antelación en su web directa),0,0,0,0,0
+q-travel-001,anthropic_claude_sonnet_4_6,informational,booking.com,True,Getyourguide.com,getyourguide.com,True,11,positive,unknown,Entradas: Getyourguide.com o web oficial de los monumentos,0,0,0,0,0
+q-travel-002,openai_gpt_4_1,comparative,booking.com,True,Booking.com,booking.com,True,1,positive,unknown,"Si prefieres hoteles y flexibilidad, Booking es una excelente opción.",0,0,0,0,0
+q-travel-002,openai_gpt_4_1,comparative,booking.com,True,Airbnb,airbnb.com,True,2,positive,unknown,"Si buscas una experiencia más local o alojamiento para grupos, Airbnb destaca.",0,0,0,0,0
+q-travel-002,openai_gpt_4_1,comparative,booking.com,True,Expedia,expedia.com,True,3,positive,unknown,"Si quieres reservar vuelo y hotel juntos y ahorrar, Expedia puede ser la mejor alternativa.",0,0,0,0,0
+q-travel-002,anthropic_claude_sonnet_4_6,comparative,booking.com,True,BOOKING.COM,booking.com,True,1,positive,unknown,"Mayor variedad de hoteles boutique en el centro histórico (Alfama, Chiado, Baixa)",0,0,0,0,0
+q-travel-002,anthropic_claude_sonnet_4_6,comparative,booking.com,True,AIRBNB,airbnb.com,True,2,positive,unknown,"Apartamentos completos en barrios auténticos (Mouraria, Intendente, Príncipe Real)",0,0,0,0,0
+q-travel-002,anthropic_claude_sonnet_4_6,comparative,booking.com,True,EXPEDIA,expedia.com,True,3,positive,unknown,Paquetes vuelo + hotel con descuentos de hasta 20-30%,0,0,0,0,0
+q-travel-003,openai_gpt_4_1,brand_check,booking.com,True,Booking,booking.com,True,1,positive,unknown,"Sí, usaría Booking para reservar un viaje de fin de semana a Oporto. Booking es una plataforma confiable, fácil de usar y ofrece una amplia variedad de alojamientos con opiniones de otros viajeros.",0,0,0,0,0
+q-travel-003,anthropic_claude_sonnet_4_6,brand_check,booking.com,True,Booking,booking.com,True,1,positive,unknown,"Sí, probablemente usaría Booking, pero combinándolo con otras herramientas.",0,0,0,0,0
+q-travel-003,anthropic_claude_sonnet_4_6,brand_check,booking.com,True,Google Hotels,google hotels,True,2,neutral,unknown,Comparar en Google Hotels o Trivago,0,0,0,0,0
+q-travel-003,anthropic_claude_sonnet_4_6,brand_check,booking.com,True,Trivago,trivago,True,3,neutral,unknown,Comparar en Google Hotels o Trivago,0,0,0,0,0
