@@ -67,24 +67,24 @@ SignalOrbit operates on three data planes converging into a unified trust dashbo
 
 ```
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  PLANE A: CONTROLLED EVALUATION                                        ║
-║  Measures how LLMs respond to identical prompts across models           ║
-║                                                                         ║
+║  PLANE A: CONTROLLED EVALUATION                                          ║
+║  Measures how LLMs respond to identical prompts across models            ║
+║                                                                          ║
 ║  prompt_pack.csv ──▶ Runner ──▶ Parser ──▶ Normalizer ──▶ KPIs         ║
-║                     (3 LLMs)   (struct)   (aliases)      (visibility)   ║
+║                     (3 LLMs)   (struct)   (aliases)      (visibility)    ║
 ╠══════════════════════════════════════════════════════════════════════════╣
-║  PLANE B: INTEGRITY SCANNING                                            ║
-║  Detects AI Recommendation Poisoning signals in URLs and pages          ║
-║                                                                         ║
-║  URL / HTML ──▶ Scanner ──▶ Events ──▶ Risk Score + MITRE mapping       ║
+║  PLANE B: INTEGRITY SCANNING                                             ║
+║  Detects AI Recommendation Poisoning signals in URLs and pages           ║
+║                                                                          ║
+║  URL / HTML ──▶ Scanner ──▶ Events ──▶ Risk Score + MITRE mapping      ║
 ╠══════════════════════════════════════════════════════════════════════════╣
-║  PLANE C: SEARCH REALITY                                                ║
-║  Contextualizes with classic SEO metrics                                ║
-║                                                                         ║
-║  Search Console API / CSV ──▶ Branded vs Non-Branded ──▶ GEO-SEO Gap   ║
+║  PLANE C: SEARCH REALITY                                                 ║
+║  Contextualizes with classic SEO metrics                                 ║
+║                                                                          ║
+║  Search Console API / CSV ──▶ Branded vs Non-Branded ──▶ GEO-SEO Gap    ║
 ╠══════════════════════════════════════════════════════════════════════════╣
-║  DASHBOARD: Visibility × Integrity × Search Reality                     ║
-║  The unified trust view that no other tool provides                     ║
+║  DASHBOARD: Visibility × Integrity × Search Reality                      ║
+║  The unified trust view that no other tool provides                      ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
@@ -382,8 +382,8 @@ Microsoft's research emphasizes that the actors behind AI Recommendation Poisoni
 
 | Member | Role | Focus |
 |--------|------|-------|
-| **Antonio** | Tech Lead | Multi-model runner, integrity scanner, coordination |
-| **Iván** | AI Engineer | Structured parser, Chrome extension (P1) |
+| **Iván** | Tech Lead | Structured parser, Chrome extension (P1) |
+| **Antonio** | AI Engineer | Multi-model runner, integrity scanner, coordination |
 | **Paul** | GTM Lead | Prompt pack, vertical strategy, commercial narrative |
 | **Carlos** | Data & Dashboard | KPI computation, normalization, Streamlit dashboard |
 | **Daniel** | Infrastructure | GCP, Search Console connector, deployment |
