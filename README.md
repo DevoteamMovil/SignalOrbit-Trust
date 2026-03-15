@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/OrbitSignal_logo.jpg" alt="SignalOrbit Trust" width="100%" />
+  <img src="docs/assets/OrbitSignal_logo.jpg" alt="SignalOrbit Trust" width="50%" />
 </p>
 
 <h1 align="center">SignalOrbit Trust</h1>
