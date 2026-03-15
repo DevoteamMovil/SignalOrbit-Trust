@@ -1,4 +1,6 @@
 .env
+.env.local
+.env.*.local
 .cache/
 __pycache__/
 *.pyc
@@ -7,3 +9,7 @@ venv/
 *.egg-info/
 dist/
 build/
+.vscode/
+.idea/
+data/raw/*.jsonl
+data/parsed/*.jsonl

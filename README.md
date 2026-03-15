@@ -116,6 +116,9 @@ python run_audit.py --priority P0
 # Run with specific models
 python run_audit.py --priority P0 --models openai_gpt_4_1,google_gemini_2_5_pro
 
+# Use original minimal prompt pack (3 prompts, travel only)
+python run_audit.py --priority P0 --input data/prompt_pack_v1.csv
+
 # Offline mode (cache only, no API calls)
 python run_audit.py --priority P0 --from-cache-only
 

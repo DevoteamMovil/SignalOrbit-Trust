@@ -40,7 +40,7 @@ def get(key: str) -> ProviderResult | None:
         return None
 
 
-def set(key: str, result: ProviderResult) -> None:
+def put(key: str, result: ProviderResult) -> None:
     """Guarda un resultado en el caché."""
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     path = CACHE_DIR / f"{key}.json"

@@ -22,6 +22,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from src.io.write_jsonl import append_record, load_existing_keys
+from src.cache import disk_cache
 
 # Prompt de parsing: extrae marcas, sentimiento, citas, ranking
 PARSER_SYSTEM_PROMPT = """Eres un analizador de respuestas de modelos de lenguaje. Tu trabajo es extraer información estructurada de una respuesta generada por un LLM.
@@ -291,8 +292,38 @@ def main():
             brand_domain=brand_domain,
         )
 
+        # Check parser cache first
+        parser_cache_key = disk_cache.make_key(
+            f"parser:{args.parser_model}",
+            raw["raw_response"],
+            raw.get("query_prompt", ""),
+            0.0,  # parser temperature is always 0
+            0,    # placeholder
+        )
+        parser_cache_path = disk_cache.CACHE_DIR / f"parser_{parser_cache_key}.json"
+
+        parsed = None
+        if parser_cache_path.exists():
+            try:
+                with open(parser_cache_path, encoding="utf-8") as cf:
+                    parsed = json.load(cf)
+            except (json.JSONDecodeError, KeyError):
+                parsed = None
+
+        if parsed is None:
+            try:
+                parsed = parse_fn(prompt, PARSER_SYSTEM_PROMPT)
+                # Cache the parser result
+                disk_cache.CACHE_DIR.mkdir(parents=True, exist_ok=True)
+                with open(parser_cache_path, "w", encoding="utf-8") as cf:
+                    json.dump(parsed, cf, ensure_ascii=False)
+            except Exception as e:
+                error_count += 1
+                print(f"  [{i}/{len(raw_records)}] ERROR {composite_key}: {e}")
+                time.sleep(0.5)
+                continue
+
         try:
-            parsed = parse_fn(prompt, PARSER_SYSTEM_PROMPT)
             canonical = _build_canonical_record(raw, parsed, brand_domain)
             append_record(args.output, canonical)
             existing_keys.add(composite_key)

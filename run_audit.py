@@ -97,7 +97,7 @@ def main():
     parser.add_argument("--models", default=None, help="Comma-separated model_source list")
     parser.add_argument("--from-cache-only", action="store_true", help="Only use cached results")
     parser.add_argument("--dry-run", action="store_true", help="Show plan without executing")
-    parser.add_argument("--input", default="data/prompt_pack_v1.csv", help="Path to prompt CSV")
+    parser.add_argument("--input", default="data/prompt_pack_v2.csv", help="Path to prompt CSV")
     parser.add_argument("--output", default="data/raw/raw_responses.jsonl", help="Path to output JSONL")
     args = parser.parse_args()
 
@@ -223,7 +223,7 @@ def main():
                     client_request_id=client_request_id,
                 )
                 # Save to cache
-                disk_cache.set(cache_key, result)
+                disk_cache.put(cache_key, result)
 
                 record = _build_record(
                     run_id=run_id,

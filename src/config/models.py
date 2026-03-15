@@ -26,5 +26,5 @@ MODEL_SOURCE_MAP = {
 GENERATION_DEFAULTS = {
     "temperature": 0.2,
     "max_output_tokens": 700,
-    "system_prompt": None,
+    "system_prompt": "Eres un asistente útil, neutral y conciso. Responde en español.",
 }

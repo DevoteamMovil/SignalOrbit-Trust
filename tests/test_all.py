@@ -105,9 +105,9 @@ def test_T01_config_models():
     check("max_output_tokens" in GENERATION_DEFAULTS, "GENERATION_DEFAULTS tiene max_output_tokens")
     check("system_prompt" in GENERATION_DEFAULTS, "GENERATION_DEFAULTS tiene system_prompt")
 
-    # T01-07: Fix C2 — system_prompt es None
-    check(GENERATION_DEFAULTS["system_prompt"] is None,
-          "Fix C2: system_prompt es None")
+    # T01-07: system_prompt is set to a neutral prompt
+    check(isinstance(GENERATION_DEFAULTS["system_prompt"], str) and len(GENERATION_DEFAULTS["system_prompt"]) > 0,
+          "system_prompt is a non-empty string")
 
     # T01-08: temperature es float entre 0 y 1
     t = GENERATION_DEFAULTS["temperature"]
@@ -291,7 +291,7 @@ def test_T04_write_jsonl():
 # ═══════════════════════════════════════════════════════════════════
 def test_T05_disk_cache():
     section("T05 · src/cache/disk_cache.py")
-    from src.cache.disk_cache import make_key, get, set as cache_set, CACHE_DIR
+    from src.cache.disk_cache import make_key, get, put as cache_put, CACHE_DIR
     from src.providers.base import ProviderResult
 
     # T05-01: make_key es determinista
@@ -325,7 +325,7 @@ def test_T05_disk_cache():
         finish_reason="stop",
         latency_ms=150,
     )
-    cache_set(test_key, test_result)
+    cache_put(test_key, test_result)
     retrieved = get(test_key)
     check(retrieved is not None, "set + get roundtrip funciona")
     if retrieved:
