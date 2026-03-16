@@ -386,7 +386,7 @@ Microsoft's research emphasizes that the actors behind AI Recommendation Poisoni
 | Member | Role | Focus |
 |--------|------|-------|
 | **Iván** | Tech Lead | Structured parser, Chrome extension (P1) |
-| **Antonio** | AI Engineer | Multi-model runner, integrity scanner, coordination |
+| **Antonio** | AI Engineer | Multi-model runner, integrity scanner, integration |
 | **Paul** | GTM Lead | Prompt pack, vertical strategy, commercial narrative |
 | **Carlos** | Data & Dashboard | KPI computation, normalization, Streamlit dashboard |
 | **Daniel** | Infrastructure | GCP, Search Console connector, deployment |
