@@ -15,6 +15,10 @@ import json
 from pathlib import Path
 from collections import defaultdict
 
+from src.logger import get_logger
+
+log = get_logger(__name__)
+
 
 # Aliases por defecto (se amplían con brand_aliases.csv)
 DEFAULT_ALIASES = {
@@ -92,7 +96,7 @@ def process_records(input_path: str, output_path: str, aliases_path: str):
 
     path = Path(input_path)
     if not path.exists():
-        print(f"[ERROR] Input not found: {input_path}")
+        log.error("Input not found", extra={"path": input_path})
         return
 
     records = []
@@ -104,10 +108,11 @@ def process_records(input_path: str, output_path: str, aliases_path: str):
             try:
                 records.append(json.loads(line))
             except json.JSONDecodeError:
+                log.warning("Skipping malformed JSON line", extra={"path": input_path})
                 continue
 
     if not records:
-        print("[WARN] No records found.")
+        log.warning("No records found", extra={"path": input_path})
         return
 
     # Flatten: one row per brand mention
@@ -179,14 +184,15 @@ def process_records(input_path: str, output_path: str, aliases_path: str):
         writer.writeheader()
         writer.writerows(rows)
 
-    print("═" * 55)
-    print("  SignalOrbit Entity Normalizer")
-    print("═" * 55)
-    print(f"  Input records: {len(records)}")
-    print(f"  Output rows: {len(rows)}")
-    print(f"  Unique brands: {len(set(r['name_normalized'] for r in rows if r['name_normalized']))}")
-    print(f"  Output: {output_path}")
-    print("═" * 55)
+    log.info(
+        "Normalization complete",
+        extra={
+            "input_records": len(records),
+            "output_rows": len(rows),
+            "unique_brands": len(set(r["name_normalized"] for r in rows if r["name_normalized"])),
+            "output": output_path,
+        },
+    )
 
 
 def main():

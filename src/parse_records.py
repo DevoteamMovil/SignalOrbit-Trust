@@ -23,6 +23,9 @@ from dotenv import load_dotenv
 
 from src.io.write_jsonl import append_record, load_existing_keys
 from src.cache import disk_cache
+from src.logger import get_logger
+
+log = get_logger(__name__)
 
 # Prompt de parsing: extrae marcas, sentimiento, citas, ranking
 PARSER_SYSTEM_PROMPT = """Eres un analizador de respuestas de modelos de lenguaje. Tu trabajo es extraer información estructurada de una respuesta generada por un LLM.
@@ -235,7 +238,7 @@ def main():
 
     input_path = Path(args.input)
     if not input_path.exists():
-        print(f"[ERROR] Input not found: {args.input}")
+        log.error("Input file not found", extra={"path": args.input})
         return
 
     # Load raw records
@@ -253,7 +256,7 @@ def main():
                 continue
 
     if not raw_records:
-        print("[WARN] No valid records found in input.")
+        log.warning("No valid records found in input", extra={"path": args.input})
         return
 
     if args.limit > 0:
@@ -264,12 +267,10 @@ def main():
 
     parse_fn = _get_parser_fn(args.parser_model)
 
-    print("═" * 55)
-    print("  SignalOrbit Structured Parser")
-    print("═" * 55)
-    print(f"  Input: {args.input}")
-    print(f"  Records: {len(raw_records)} · Parser: {args.parser_model}")
-    print("─" * 55)
+    log.info(
+        "Parser started",
+        extra={"input": args.input, "records": len(raw_records), "parser_model": args.parser_model},
+    )
 
     parsed_count = 0
     error_count = 0
@@ -280,7 +281,7 @@ def main():
         composite_key = f"{query_id}::{model_source}"
 
         if composite_key in existing_keys:
-            print(f"  [{i}/{len(raw_records)}] SKIP {composite_key}")
+            log.debug("skip_existing", extra={"key": composite_key})
             continue
 
         # Determine brand_domain from prompt_pack or override
@@ -319,7 +320,7 @@ def main():
                     json.dump(parsed, cf, ensure_ascii=False)
             except Exception as e:
                 error_count += 1
-                print(f"  [{i}/{len(raw_records)}] ERROR {composite_key}: {e}")
+                log.error("parse_error", extra={"key": composite_key, "error": str(e)})
                 time.sleep(0.5)
                 continue
 
@@ -328,23 +329,26 @@ def main():
             append_record(args.output, canonical)
             existing_keys.add(composite_key)
             parsed_count += 1
-
-            n_brands = len(canonical["brands_extracted"])
-            present = "YES" if canonical["brand_present"] else "no"
-            print(f"  [{i}/{len(raw_records)}] OK {composite_key} · "
-                  f"{n_brands} brands · present={present}")
+            log.info(
+                "parse_ok",
+                extra={
+                    "key": composite_key,
+                    "n_brands": len(canonical["brands_extracted"]),
+                    "brand_present": canonical["brand_present"],
+                },
+            )
 
         except Exception as e:
             error_count += 1
-            print(f"  [{i}/{len(raw_records)}] ERROR {composite_key}: {e}")
+            log.error("record_build_error", extra={"key": composite_key, "error": str(e)})
 
         # Rate limit
         time.sleep(0.5)
 
-    print("─" * 55)
-    print(f"  Parsed: {parsed_count} · Errors: {error_count}")
-    print(f"  Output: {args.output}")
-    print("═" * 55)
+    log.info(
+        "Parser complete",
+        extra={"parsed": parsed_count, "errors": error_count, "output": args.output},
+    )
 
 
 if __name__ == "__main__":

@@ -16,6 +16,9 @@ from pathlib import Path
 
 from src.integrity.scanner import IntegrityScanner, IntegrityEvent
 from src.io.write_jsonl import append_record
+from src.logger import get_logger
+
+log = get_logger(__name__)
 
 
 def _print_event(event: IntegrityEvent) -> None:
@@ -70,7 +73,7 @@ def main():
     elif args.url_list:
         url_file = Path(args.url_list)
         if not url_file.exists():
-            print(f"  [ERROR] File not found: {args.url_list}")
+            log.error("URL list file not found", extra={"path": args.url_list})
             return
         urls = [line.strip() for line in url_file.read_text(encoding="utf-8").splitlines()
                 if line.strip() and not line.strip().startswith("#")]

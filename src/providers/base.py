@@ -1,20 +1,20 @@
 """Clase base para adaptadores de proveedores LLM."""
 
-from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
+from pydantic import BaseModel, Field
 
 
-@dataclass
-class ProviderResult:
+class ProviderResult(BaseModel):
     """Resultado de una llamada a un proveedor LLM."""
+
     text: str
-    input_tokens: int | None
-    output_tokens: int | None
-    provider_request_id: str | None
-    finish_reason: str | None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    provider_request_id: str | None = None
+    finish_reason: str | None = None
     latency_ms: int
-    raw_payload: dict | None = field(default=None, repr=False)
-    logprobs_data: list[dict] | None = field(default=None, repr=False)
+    raw_payload: dict | None = Field(default=None, exclude=True)
+    logprobs_data: list[dict] | None = Field(default=None, exclude=True)
 
 
 class ProviderAdapter(ABC):

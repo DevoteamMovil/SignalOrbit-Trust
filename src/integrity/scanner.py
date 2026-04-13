@@ -4,9 +4,9 @@ import re
 import urllib.parse
 import uuid
 from datetime import datetime, timezone
-from dataclasses import dataclass, asdict
 
 import requests
+from pydantic import BaseModel, field_validator
 
 from src.config.integrity import (
     AI_ASSISTANT_DOMAINS,
@@ -19,10 +19,30 @@ from src.config.integrity import (
     get_risk_level,
 )
 from src.integrity.html_parser import extract_links_from_html, extract_hidden_content
+from src.logger import get_logger
+
+log = get_logger(__name__)
+
+_ALLOWED_SCHEMES = {"http", "https"}
 
 
-@dataclass
-class IntegrityEvent:
+def _validate_url(url: str) -> str:
+    """Validates URL scheme. Raises ValueError for disallowed schemes."""
+    try:
+        parsed = urllib.parse.urlparse(url)
+    except Exception as exc:
+        raise ValueError(f"Malformed URL: {url}") from exc
+    if parsed.scheme.lower() not in _ALLOWED_SCHEMES:
+        raise ValueError(
+            f"Disallowed URL scheme '{parsed.scheme}' in: {url!r}. "
+            f"Only {_ALLOWED_SCHEMES} are permitted."
+        )
+    return url
+
+
+class IntegrityEvent(BaseModel):
+    """Evento de integridad detectado por el scanner."""
+
     event_id: str
     scan_timestamp_utc: str
     source_page_url: str
@@ -41,8 +61,13 @@ class IntegrityEvent:
     link_text_or_context: str
     notes: str = ""
 
+    @field_validator("risk_score")
+    @classmethod
+    def clamp_risk_score(cls, v: int) -> int:
+        return max(0, min(100, v))
+
     def to_dict(self) -> dict:
-        return asdict(self)
+        return self.model_dump()
 
 
 class IntegrityScanner:
@@ -51,11 +76,17 @@ class IntegrityScanner:
     def scan_page(self, url: str) -> list[IntegrityEvent]:
         """Descarga una página y analiza todos sus enlaces."""
         try:
+            _validate_url(url)
+        except ValueError as exc:
+            log.error("Invalid URL rejected", extra={"url": url, "reason": str(exc)})
+            return []
+
+        try:
             resp = requests.get(url, timeout=15, headers={"User-Agent": "SignalOrbit/1.0"})
             resp.raise_for_status()
             html = resp.text
-        except Exception as e:
-            print(f"  [WARN] Could not fetch {url}: {e}")
+        except Exception as exc:
+            log.warning("Could not fetch page", extra={"url": url, "error": str(exc)})
             return []
         return self.scan_html(html, source_url=url)
 
@@ -63,7 +94,7 @@ class IntegrityScanner:
         """Analiza HTML ya descargado: enlaces, contenido oculto y meta tags."""
         events = []
 
-        # Plane 1: Link analysis (original)
+        # Plane 1: Link analysis
         links = extract_links_from_html(html)
         for link in links:
             event = self._analyze_link(
@@ -87,32 +118,38 @@ class IntegrityScanner:
             if event:
                 events.append(event)
 
+        log.info(
+            "Scan complete",
+            extra={"source_url": source_url, "events_found": len(events)},
+        )
         return events
 
     def analyze_single_url(self, url: str) -> IntegrityEvent | None:
         """Analiza una URL individual sin descargar ninguna página."""
-        return self._analyze_link(
-            href=url,
-            link_text="",
-            source_page_url="direct_input",
-        )
+        try:
+            _validate_url(url)
+        except ValueError as exc:
+            log.error("Invalid URL rejected", extra={"url": url, "reason": str(exc)})
+            return None
+        return self._analyze_link(href=url, link_text="", source_page_url="direct_input")
 
     def _analyze_link(
         self, href: str, link_text: str, source_page_url: str
     ) -> IntegrityEvent | None:
         """Analiza un enlace individual. Devuelve IntegrityEvent si es sospechoso."""
-        # 1. Parsear URL
         try:
             parsed = urllib.parse.urlparse(href)
         except Exception:
             return None
 
-        # 2. ¿El dominio es un asistente AI conocido?
+        # Only follow http/https links
+        if parsed.scheme.lower() not in _ALLOWED_SCHEMES:
+            return None
+
         domain = parsed.netloc.lower().lstrip("www.")
         if domain not in AI_ASSISTANT_DOMAINS:
             return None
 
-        # 3. ¿Tiene parámetro q o prompt con contenido?
         params = urllib.parse.parse_qs(parsed.query)
         prompt_text = None
         param_name = None
@@ -126,36 +163,27 @@ class IntegrityScanner:
         if not prompt_text:
             return None
 
-        # 4. Decodificar el prompt (recursivo para evitar double-encoding evasion)
         decoded = self._decode_recursive(prompt_text)
-
-        # 5. Buscar keywords de memoria
         decoded_lower = decoded.lower()
         found_keywords = [kw for kw in MEMORY_KEYWORDS if kw.lower() in decoded_lower]
 
-        # 6. Detectar instrucciones de persistencia
         has_persistence = any(
             p1.lower() in decoded_lower and p2.lower() in decoded_lower
             for p1, p2 in PERSISTENCE_PATTERNS
         )
 
-        # Skip if no suspicious signals (just a normal search link)
         if not found_keywords and not has_persistence:
             return None
 
-        # 7. Calcular risk score
         score = RISK_SCORING["ai_domain_detected"]
         score += RISK_SCORING["prompt_param_present"]
-        keyword_score = min(
+        score += min(
             len(found_keywords) * RISK_SCORING["per_memory_keyword"],
             RISK_SCORING["max_keyword_score"],
         )
-        score += keyword_score
         if has_persistence:
             score += RISK_SCORING["persistence_instruction"]
-        score = min(score, 100)
 
-        # 8. Determinar evidence_type basado en link_text
         link_text_lower = link_text.lower() if link_text else ""
         if "summarize" in link_text_lower or "resumen" in link_text_lower:
             evidence_type = "summarize_button"
@@ -164,18 +192,13 @@ class IntegrityScanner:
         else:
             evidence_type = "hidden_link"
 
-        # 9. Intentar extraer marca del prompt
         brand = self._extract_brand_hint(decoded)
 
-        # 10. Construir MITRE tags
-        mitre_atlas = ["AML.T0051"]  # Prompt Injection siempre
+        mitre_atlas = ["AML.T0051"]
         if found_keywords or has_persistence:
-            mitre_atlas.append("AML.T0080")  # Memory Poisoning
+            mitre_atlas.append("AML.T0080")
 
-        mitre_attack = ["T1204.001"]  # User Execution: Malicious Link
-
-        # 11. Construir evento
-        return IntegrityEvent(
+        event = IntegrityEvent(
             event_id=f"evt-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{uuid.uuid4().hex[:8]}",
             scan_timestamp_utc=datetime.now(timezone.utc).isoformat(),
             source_page_url=source_page_url,
@@ -187,21 +210,22 @@ class IntegrityScanner:
             persistence_instructions_found=has_persistence,
             brand_mentioned_in_prompt=brand,
             mitre_atlas_tags=mitre_atlas,
-            mitre_attack_tags=mitre_attack,
+            mitre_attack_tags=["T1204.001"],
             risk_score=score,
             risk_level=get_risk_level(score),
             evidence_type=evidence_type,
             link_text_or_context=link_text or "",
         )
+        log.debug(
+            "Link event detected",
+            extra={"domain": domain, "risk_score": event.risk_score, "risk_level": event.risk_level},
+        )
+        return event
 
     def _analyze_hidden_content(self, hidden, source_page_url: str) -> IntegrityEvent | None:
         """Analiza un fragmento de texto oculto en busca de keywords de manipulación."""
         text_lower = hidden.text.lower()
-
-        # Buscar keywords de memoria
         found_keywords = [kw for kw in MEMORY_KEYWORDS if kw.lower() in text_lower]
-
-        # Detectar instrucciones de persistencia
         has_persistence = any(
             p1.lower() in text_lower and p2.lower() in text_lower
             for p1, p2 in PERSISTENCE_PATTERNS
@@ -210,22 +234,18 @@ class IntegrityScanner:
         if not found_keywords and not has_persistence:
             return None
 
-        # Calcular risk score
         score = HIDDEN_CONTENT_SCORING["hidden_element_base"]
-        keyword_score = min(
+        score += min(
             len(found_keywords) * HIDDEN_CONTENT_SCORING["per_memory_keyword"],
             HIDDEN_CONTENT_SCORING["max_keyword_score"],
         )
-        score += keyword_score
         if has_persistence:
             score += HIDDEN_CONTENT_SCORING["persistence_instruction"]
-        score = min(score, 100)
 
         brand = self._extract_brand_hint(hidden.text)
-
-        mitre_atlas = ["AML.T0051"]  # Indirect Prompt Injection
+        mitre_atlas = ["AML.T0051"]
         if found_keywords or has_persistence:
-            mitre_atlas.append("AML.T0080")  # Memory Poisoning
+            mitre_atlas.append("AML.T0080")
 
         return IntegrityEvent(
             event_id=f"evt-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{uuid.uuid4().hex[:8]}",
@@ -239,7 +259,7 @@ class IntegrityScanner:
             persistence_instructions_found=has_persistence,
             brand_mentioned_in_prompt=brand,
             mitre_atlas_tags=mitre_atlas,
-            mitre_attack_tags=["T1027"],  # Obfuscated Files or Information
+            mitre_attack_tags=["T1027"],
             risk_score=score,
             risk_level=get_risk_level(score),
             evidence_type=f"hidden_text_{hidden.method}",
@@ -248,14 +268,12 @@ class IntegrityScanner:
 
     def _analyze_meta_tag(self, meta, source_page_url: str) -> IntegrityEvent | None:
         """Analiza un meta tag en busca de instrucciones de manipulación AI."""
-        # Solo analizar meta tags sensibles
         meta_name_lower = meta.name.lower()
         if meta_name_lower not in SENSITIVE_META_NAMES:
             return None
 
         content_lower = meta.content.lower()
         found_keywords = [kw for kw in MEMORY_KEYWORDS if kw.lower() in content_lower]
-
         has_persistence = any(
             p1.lower() in content_lower and p2.lower() in content_lower
             for p1, p2 in PERSISTENCE_PATTERNS
@@ -265,17 +283,14 @@ class IntegrityScanner:
             return None
 
         score = HIDDEN_CONTENT_SCORING["meta_tag_base"]
-        keyword_score = min(
+        score += min(
             len(found_keywords) * HIDDEN_CONTENT_SCORING["per_memory_keyword"],
             HIDDEN_CONTENT_SCORING["max_keyword_score"],
         )
-        score += keyword_score
         if has_persistence:
             score += HIDDEN_CONTENT_SCORING["persistence_instruction"]
-        score = min(score, 100)
 
         brand = self._extract_brand_hint(meta.content)
-
         mitre_atlas = ["AML.T0051"]
         if found_keywords or has_persistence:
             mitre_atlas.append("AML.T0080")

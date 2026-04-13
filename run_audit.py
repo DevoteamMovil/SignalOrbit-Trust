@@ -23,6 +23,9 @@ from src.config.models import MODEL_SOURCE_MAP, GENERATION_DEFAULTS
 from src.io.load_prompts import load_prompts
 from src.io.write_jsonl import append_record, load_existing_keys
 from src.cache import disk_cache
+from src.logger import get_logger
+
+log = get_logger(__name__)
 
 # Retry config
 MAX_RETRIES = 3
@@ -93,7 +96,7 @@ def _call_with_retry(adapter, *, prompt, system_prompt, provider_model_id,
                 raise
 
             wait = RETRY_BACKOFF[attempt] if attempt < len(RETRY_BACKOFF) else RETRY_BACKOFF[-1]
-            print(f"    [RETRY] Attempt {attempt + 1}/{MAX_RETRIES}, waiting {wait}s...")
+            log.warning("Retrying call", extra={"attempt": attempt + 1, "max": MAX_RETRIES, "wait_s": wait})
             time.sleep(wait)
 
     raise last_exc  # Should not reach here
@@ -120,13 +123,13 @@ def main():
     # Validate model keys
     for mk in model_keys:
         if mk not in MODEL_SOURCE_MAP:
-            print(f"[ERROR] Unknown model_source: {mk}")
+            log.error("Unknown model_source", extra={"model_source": mk})
             return
 
     # Load prompts
     prompts = load_prompts(args.input, priority_filter=args.priority)
     if not prompts:
-        print(f"[WARN] No prompts found for priority={args.priority} in {args.input}")
+        log.warning("No prompts found", extra={"priority": args.priority, "input": args.input})
         return
 
     # Load existing keys to skip duplicates
@@ -139,23 +142,24 @@ def main():
 
     total = len(prompts) * len(model_keys)
 
-    print("═" * 55)
-    print(f"  SignalOrbit Audit Run: {run_id}")
-    print("═" * 55)
-    print(f"  Prompts: {len(prompts)} · Models: {len(model_keys)} · Total: {total}")
-    if args.dry_run:
-        print("  Mode: DRY RUN (no calls will be made)")
-    elif args.from_cache_only:
-        print("  Mode: CACHE ONLY (no API calls)")
-    print("─" * 55)
+    log.info(
+        "Audit run started",
+        extra={
+            "run_id": run_id,
+            "prompts": len(prompts),
+            "models": len(model_keys),
+            "total_calls": total,
+            "dry_run": args.dry_run,
+            "cache_only": args.from_cache_only,
+        },
+    )
 
     if args.dry_run:
         for prompt_row in prompts:
             for mk in model_keys:
                 key = f"{prompt_row['query_id']}::{mk}"
                 status = "SKIP (exists)" if key in existing_keys else "PENDING"
-                print(f"  {key} → {status}")
-        print("═" * 55)
+                log.info("dry_run", extra={"key": key, "status": status})
         return
 
     # Instantiate providers (lazy, per-provider)
@@ -205,11 +209,11 @@ def main():
                 append_record(args.output, record)
                 existing_keys.add(composite_key)
                 stats[mk]["cache"] += 1
-                print(f"  [CACHE] {composite_key}")
+                log.info("cache_hit", extra={"key": composite_key})
                 continue
 
             if args.from_cache_only:
-                print(f"  [CACHE MISS] {composite_key}")
+                log.debug("cache_miss_skip", extra={"key": composite_key})
                 continue
 
             # Lazy-init provider
@@ -217,7 +221,7 @@ def main():
                 try:
                     provider_instances[provider_name] = _get_provider_instance(provider_name)
                 except Exception as e:
-                    print(f"  [ERROR] Cannot init {provider_name}: {e}")
+                    log.error("Provider init failed", extra={"provider": provider_name, "error": str(e)})
                     stats[mk]["error"] += 1
                     continue
 
@@ -255,7 +259,7 @@ def main():
                 append_record(args.output, record)
                 existing_keys.add(composite_key)
                 stats[mk]["ok"] += 1
-                print(f"  [OK] {composite_key} ({result.latency_ms}ms)")
+                log.info("call_ok", extra={"key": composite_key, "latency_ms": result.latency_ms})
 
             except Exception as e:
                 error_record = _build_error_record(
@@ -275,7 +279,7 @@ def main():
                 append_record(args.output, error_record)
                 existing_keys.add(composite_key)
                 stats[mk]["error"] += 1
-                print(f"  [ERROR] {composite_key}: {e}")
+                log.error("call_error", extra={"key": composite_key, "error": str(e)})
 
             # Rate limit between calls to same provider
             time.sleep(RATE_LIMIT_DELAY)
@@ -284,13 +288,15 @@ def main():
     minutes = int(elapsed // 60)
     seconds = int(elapsed % 60)
 
-    print("─" * 55)
-    for mk in model_keys:
-        s = stats[mk]
-        print(f"  {mk:40s}: {s['ok']:2d} OK · {s['error']:2d} ERR · {s['cache']:2d} CACHE")
-    print("─" * 55)
-    print(f"  Elapsed: {minutes}m {seconds:02d}s · Output: {args.output}")
-    print("═" * 55)
+    log.info(
+        "Audit run complete",
+        extra={
+            "run_id": run_id,
+            "elapsed_s": round(elapsed, 1),
+            "stats": stats,
+            "output": args.output,
+        },
+    )
 
 
 def _build_record(*, run_id, query_id, query_family, query_prompt, model_source,
