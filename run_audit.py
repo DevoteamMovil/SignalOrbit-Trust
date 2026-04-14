@@ -71,6 +71,42 @@ def _get_provider_instance(provider_name: str):
         raise ValueError(f"Unknown provider: {provider_name}")
 
 
+def _is_retryable(exc: Exception) -> bool:
+    """Determina si una excepción es reintentable.
+
+    Cubre:
+    - Códigos HTTP 429/5xx en cualquier SDK (openai, anthropic, google-genai, httpx, requests)
+    - Timeouts de cualquier librería (no solo TimeoutError de stdlib)
+    """
+    # HTTP status codes — todos los SDKs exponen status_code o status
+    status_code = getattr(exc, "status_code", None) or getattr(exc, "status", None)
+    if status_code in RETRY_STATUS_CODES:
+        return True
+
+    # Timeouts — stdlib + requests + httpx + openai + anthropic + google
+    timeout_types: tuple[type, ...] = (TimeoutError,)
+    try:
+        import requests
+        timeout_types += (requests.Timeout, requests.ConnectionError)
+    except ImportError:
+        pass
+    try:
+        import httpx
+        timeout_types += (httpx.TimeoutException, httpx.ConnectError)
+    except ImportError:
+        pass
+
+    if isinstance(exc, timeout_types):
+        return True
+
+    # Fallback: nombre de clase contiene "Timeout" o "RateLimit"
+    cls_name = type(exc).__name__
+    if any(kw in cls_name for kw in ("Timeout", "RateLimit", "ServiceUnavailable", "Overloaded")):
+        return True
+
+    return False
+
+
 def _call_with_retry(adapter, *, prompt, system_prompt, provider_model_id,
                      temperature, max_output_tokens, client_request_id):
     """Llama al proveedor con retry y backoff exponencial."""
@@ -87,16 +123,19 @@ def _call_with_retry(adapter, *, prompt, system_prompt, provider_model_id,
             )
         except Exception as e:
             last_exc = e
-            # Check if retryable
-            status_code = getattr(e, "status_code", None)
-            is_timeout = isinstance(e, (TimeoutError,))
-            is_retryable = status_code in RETRY_STATUS_CODES or is_timeout
-
-            if not is_retryable or attempt >= MAX_RETRIES:
+            if not _is_retryable(e) or attempt >= MAX_RETRIES:
                 raise
-
             wait = RETRY_BACKOFF[attempt] if attempt < len(RETRY_BACKOFF) else RETRY_BACKOFF[-1]
-            log.warning("Retrying call", extra={"attempt": attempt + 1, "max": MAX_RETRIES, "wait_s": wait})
+            log.warning(
+                "Retrying call",
+                extra={
+                    "attempt": attempt + 1,
+                    "max": MAX_RETRIES,
+                    "wait_s": wait,
+                    "error_type": type(e).__name__,
+                    "error": str(e),
+                },
+            )
             time.sleep(wait)
 
     raise last_exc  # Should not reach here

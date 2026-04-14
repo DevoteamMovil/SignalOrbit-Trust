@@ -293,9 +293,9 @@ def main():
             brand_domain=brand_domain,
         )
 
-        # Check parser cache first
+        # Check parser cache first — key includes parser_model to avoid cross-model cache hits
         parser_cache_key = disk_cache.make_key(
-            f"parser:{args.parser_model}",
+            f"parser:{args.parser_model}:{raw.get('model_source', '')}",
             raw["raw_response"],
             raw.get("query_prompt", ""),
             0.0,  # parser temperature is always 0
