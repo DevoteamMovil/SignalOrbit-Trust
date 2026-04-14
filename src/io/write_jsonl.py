@@ -1,16 +1,23 @@
 """Escritura incremental a archivos JSONL."""
 
 import json
+import os
 from pathlib import Path
 
 
 def append_record(filepath: str, record: dict) -> None:
-    """Escribe un registro JSON en una línea al final del archivo."""
+    """Escribe un registro JSON en una línea al final del archivo.
+
+    La línea se serializa completamente en memoria antes de escribirla,
+    seguida de fsync, para evitar líneas truncadas si el proceso se interrumpe.
+    """
     path = Path(filepath)
     path.parent.mkdir(parents=True, exist_ok=True)
+    line = json.dumps(record, ensure_ascii=False) + "\n"
     with open(path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        f.write(line)
         f.flush()
+        os.fsync(f.fileno())
 
 
 def load_existing_keys(filepath: str) -> set[str]:

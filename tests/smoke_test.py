@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Smoke test: verifica conectividad con los 3 proveedores LLM."""
+"""Smoke test: verifica conectividad con los proveedores LLM configurados."""
 
+import os
 import sys
-import time
 import uuid
 
 from dotenv import load_dotenv
@@ -11,6 +11,14 @@ from src.config.models import MODEL_SOURCE_MAP
 
 SMOKE_PROMPT = "Responde solo: OK"
 SYSTEM_PROMPT = "Eres un asistente útil, neutral y conciso. Responde en español."
+
+# API key env var required per provider — missing key → SKIP, not FAIL
+_PROVIDER_KEY_ENV = {
+    "openai": "OPENAI_API_KEY",
+    "gemini": "GEMINI_API_KEY",
+    "anthropic": "ANTHROPIC_API_KEY",
+    "xai": "XAI_API_KEY",
+}
 
 
 def _get_adapter(provider_name: str):
@@ -23,15 +31,18 @@ def _get_adapter(provider_name: str):
     elif provider_name == "anthropic":
         from src.providers.anthropic_provider import AnthropicProvider
         return AnthropicProvider()
+    elif provider_name == "xai":
+        from src.providers.xai_provider import XAIProvider
+        return XAIProvider()
     return None
 
 
 def main():
     load_dotenv()
 
-    print("═" * 60)
+    print("=" * 60)
     print("  SignalOrbit Smoke Test")
-    print("═" * 60)
+    print("=" * 60)
 
     results = []
     for model_source, cfg in MODEL_SOURCE_MAP.items():
@@ -41,6 +52,12 @@ def main():
 
         provider_name = cfg["provider"]
         provider_model_id = cfg["provider_model_id"]
+
+        # Skip cleanly if the API key is not configured
+        key_env = _PROVIDER_KEY_ENV.get(provider_name)
+        if key_env and not os.environ.get(key_env):
+            print(f"  {model_source:40s} SKIPPED (no {key_env})")
+            continue
 
         try:
             adapter = _get_adapter(provider_name)
@@ -58,20 +75,22 @@ def main():
             )
 
             text_preview = result.text[:100].replace("\n", " ")
-            print(f"  {model_source:40s} OK  {result.latency_ms:5d}ms  "
-                  f"in={result.input_tokens} out={result.output_tokens}  "
-                  f"\"{text_preview}\"")
+            print(
+                f"  {model_source:40s} OK  {result.latency_ms:5d}ms  "
+                f"in={result.input_tokens} out={result.output_tokens}  "
+                f'"{text_preview}"'
+            )
             results.append(("OK", model_source))
 
         except Exception as e:
             print(f"  {model_source:40s} FAIL  {e}")
             results.append(("FAIL", model_source))
 
-    print("─" * 60)
+    print("-" * 60)
     ok_count = sum(1 for s, _ in results if s == "OK")
     fail_count = sum(1 for s, _ in results if s == "FAIL")
     print(f"  Results: {ok_count} OK · {fail_count} FAIL")
-    print("═" * 60)
+    print("=" * 60)
 
     sys.exit(0 if fail_count == 0 else 1)
 

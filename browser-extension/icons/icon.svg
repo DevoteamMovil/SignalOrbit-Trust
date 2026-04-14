@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a0a2e"/>
+      <stop offset="100%" style="stop-color:#4a1a8e"/>
+    </linearGradient>
+  </defs>
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="url(#bg)"/>
+  <!-- Shield shape -->
+  <path d="M64 18 L96 32 L96 64 C96 82 80 96 64 104 C48 96 32 82 32 64 L32 32 Z"
+        fill="none" stroke="#c084fc" stroke-width="4" stroke-linejoin="round"/>
+  <!-- Inner shield fill -->
+  <path d="M64 26 L90 38 L90 64 C90 78 78 90 64 97 C50 90 38 78 38 64 L38 38 Z"
+        fill="#2d1060" opacity="0.8"/>
+  <!-- Checkmark / signal icon -->
+  <circle cx="64" cy="58" r="12" fill="none" stroke="#c084fc" stroke-width="3"/>
+  <line x1="64" y1="70" x2="64" y2="80" stroke="#c084fc" stroke-width="3" stroke-linecap="round"/>
+  <!-- Orbit ring -->
+  <ellipse cx="64" cy="64" rx="28" ry="10" fill="none" stroke="#8a2be2" stroke-width="1.5" opacity="0.5" transform="rotate(-30 64 64)"/>
+</svg>

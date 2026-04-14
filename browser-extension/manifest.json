@@ -1,0 +1,58 @@
+{
+  "manifest_version": 3,
+  "name": "SignalOrbit Integrity",
+  "version": "1.0.0",
+  "description": "Detects AI Recommendation Poisoning signals on any webpage — hidden prompts, memory injection, and prefilled AI assistant links.",
+
+  "icons": {
+    "16":  "icons/icon16.png",
+    "48":  "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16":  "icons/icon16.png",
+      "48":  "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "SignalOrbit Integrity"
+  },
+
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["rules.js", "scanner.js", "content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "tabs"
+  ],
+
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "signalorbit-integrity@devoteam.com",
+      "strict_min_version": "109.0"
+    }
+  }
+}
