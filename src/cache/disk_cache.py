@@ -21,7 +21,11 @@ def make_key(
 
 
 def get(key: str) -> ProviderResult | None:
-    """Recupera un resultado del caché. Devuelve None si no existe o está corrupto."""
+    """Recupera un resultado del caché. Devuelve None si no existe o está corrupto.
+
+    Si el archivo existe pero está corrupto (JSON truncado por interrupción del proceso),
+    lo elimina para que la siguiente llamada lo regenere limpiamente.
+    """
     path = CACHE_DIR / f"{key}.json"
     if not path.exists():
         return None
@@ -38,6 +42,11 @@ def get(key: str) -> ProviderResult | None:
             logprobs_data=data.get("logprobs_data"),
         )
     except (json.JSONDecodeError, KeyError, TypeError):
+        # Archivo corrupto — eliminarlo para que se regenere en la próxima llamada
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            pass
         return None
 
 
