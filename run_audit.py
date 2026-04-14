@@ -46,11 +46,11 @@ def _avg_logprob(logprobs_data: list[dict] | None) -> float | None:
 
 
 def _make_run_id(output_path: str) -> str:
-    """Genera run_id secuencial basado en registros existentes."""
+    """Genera run_id único basado en fecha + UUID corto."""
+    import uuid
     date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
-    existing = load_existing_keys(output_path)
-    seq = len(existing) // max(len([m for m in MODEL_SOURCE_MAP.values() if m["enabled"]]), 1) + 1
-    return f"run-{date_str}-{seq:03d}"
+    short_id = uuid.uuid4().hex[:6]
+    return f"run-{date_str}-{short_id}"
 
 
 def _get_provider_instance(provider_name: str):

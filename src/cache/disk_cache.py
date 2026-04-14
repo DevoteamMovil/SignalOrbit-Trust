@@ -51,9 +51,13 @@ def get(key: str) -> ProviderResult | None:
 
 
 def put(key: str, result: ProviderResult) -> None:
-    """Guarda un resultado en el caché."""
+    """Guarda un resultado en el caché usando escritura atómica (tmp → rename).
+
+    Evita archivos corruptos si el proceso se interrumpe durante la escritura.
+    """
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     path = CACHE_DIR / f"{key}.json"
+    tmp_path = CACHE_DIR / f"{key}.tmp"
     data = {
         "text": result.text,
         "input_tokens": result.input_tokens,
@@ -63,5 +67,10 @@ def put(key: str, result: ProviderResult) -> None:
         "latency_ms": result.latency_ms,
         "logprobs_data": result.logprobs_data,
     }
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False)
+    try:
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False)
+        tmp_path.replace(path)  # atomic on POSIX; best-effort on Windows
+    except Exception:
+        tmp_path.unlink(missing_ok=True)
+        raise

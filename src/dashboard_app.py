@@ -52,6 +52,7 @@ MOCK_INTEGRITY_PATH = MOCK_DIR / "mock_integrity_events.jsonl"
 GSC_PATH = DATA_DIR / "final" / "gsc_metrics.csv"
 MOCK_GSC_PATH = MOCK_DIR / "gsc_export.csv"
 RAW_RESPONSES_PATH = DATA_DIR / "raw" / "raw_responses.jsonl"
+SNAPSHOT_PATH = DATA_DIR / "final" / "demo_snapshot.json"
 
 
 def _model_label(raw: str) -> str:
@@ -153,6 +154,39 @@ def load_raw_responses(path: str) -> list[dict]:
     return records
 
 
+# ─── Snapshot helpers ─────────────────────────────────────────────
+def save_snapshot(data: list[dict], integrity: list[dict], gsc: list[dict]) -> None:
+    """Serializa el estado actual del dashboard a un JSON para demos offline."""
+    SNAPSHOT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "metadata": {
+            "version": "2.0",
+            "timestamp_utc": pd.Timestamp.utcnow().isoformat(),
+            "records": len(data),
+            "integrity_events": len(integrity),
+            "gsc_rows": len(gsc),
+        },
+        "normalized": data,
+        "integrity": integrity,
+        "gsc": gsc,
+    }
+    tmp = SNAPSHOT_PATH.with_suffix(".tmp")
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, default=str)
+        tmp.replace(SNAPSHOT_PATH)
+    except Exception:
+        tmp.unlink(missing_ok=True)
+        raise
+
+
+def load_snapshot() -> tuple[list[dict], list[dict], list[dict]]:
+    """Carga datos desde el snapshot JSON. Devuelve (data, integrity, gsc)."""
+    with open(SNAPSHOT_PATH, encoding="utf-8") as f:
+        snap = json.load(f)
+    return snap.get("normalized", []), snap.get("integrity", []), snap.get("gsc", [])
+
+
 # ─── KPI calculators ──────────────────────────────────────────────
 def calc_share_of_model_voice(data: list[dict], brand_domain: str) -> dict:
     """% de respuestas donde aparece la marca, por modelo."""
@@ -230,21 +264,43 @@ def main():
     st.title("SignalOrbit — AI Discovery Trust Layer")
     st.caption("See where your brand appears in AI discovery — and whether that visibility is organic, missing, or potentially manipulated.")
 
-    # ── Data sources ──────────────────────────────────────────
-    use_mock = not NORMALIZED_PATH.exists()
-    norm_path = str(MOCK_DATA_PATH) if use_mock else str(NORMALIZED_PATH)
-    int_path = str(MOCK_INTEGRITY_PATH) if not INTEGRITY_PATH.exists() else str(INTEGRITY_PATH)
-    gsc_path = str(MOCK_GSC_PATH) if not GSC_PATH.exists() else str(GSC_PATH)
-
-    if use_mock:
-        st.info("Showing demo data (mock). Run the full pipeline for live results.", icon="ℹ️")
-
-    data = load_normalized(norm_path)
-    integrity = load_integrity(int_path)
-    gsc = load_gsc(gsc_path)
-
     # ── Sidebar ───────────────────────────────────────────────
     st.sidebar.markdown("### System Controls")
+
+    # Offline snapshot toggle
+    use_snapshot = st.sidebar.toggle(
+        "Load Offline Snapshot",
+        value=False,
+        help="Load a previously saved demo snapshot instead of live data files.",
+    )
+
+    if use_snapshot:
+        if not SNAPSHOT_PATH.exists():
+            st.sidebar.error("No snapshot found. Generate one first using the button below.")
+            st.stop()
+        data, integrity, gsc = load_snapshot()
+        st.sidebar.info("Running on offline snapshot.", icon="📦")
+    else:
+        # ── Data sources ──────────────────────────────────────
+        use_mock = not NORMALIZED_PATH.exists()
+        norm_path = str(MOCK_DATA_PATH) if use_mock else str(NORMALIZED_PATH)
+        int_path = str(MOCK_INTEGRITY_PATH) if not INTEGRITY_PATH.exists() else str(INTEGRITY_PATH)
+        gsc_path = str(MOCK_GSC_PATH) if not GSC_PATH.exists() else str(GSC_PATH)
+
+        if use_mock:
+            st.info("Showing demo data (mock). Run the full pipeline for live results.", icon="ℹ️")
+
+        data = load_normalized(norm_path)
+        integrity = load_integrity(int_path)
+        gsc = load_gsc(gsc_path)
+
+        # Save snapshot button
+        if data and st.sidebar.button("💾 Save Demo Snapshot", use_container_width=True):
+            try:
+                save_snapshot(data, integrity, gsc)
+                st.sidebar.success("Snapshot saved.", icon="✅")
+            except Exception as e:
+                st.sidebar.error(f"Snapshot failed: {e}")
 
     brand_domains = sorted(set(r.get("brand_domain", "") for r in data if r.get("brand_domain")))
     selected_brand = st.sidebar.selectbox("Brand Scope", brand_domains if brand_domains else ["N/A"])
