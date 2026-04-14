@@ -18,13 +18,10 @@ Risk is scored 0–100 and mapped to MITRE ATLAS® (AML.T0051 Prompt Injection, 
 
 ## Install — Chrome / Edge / Brave
 
-1. Generate icons (one-time):
+1. Generate icons (one-time, requires Pillow — already in `requirements.txt`):
    ```bash
-   cd browser-extension
-   npm install sharp
-   node generate_icons.js
+   python browser-extension/generate_icons.py
    ```
-   > If you skip this step, the extension works but shows no icon.
 
 2. Open `chrome://extensions`
 3. Enable **Developer mode** (top right toggle)
