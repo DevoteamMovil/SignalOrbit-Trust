@@ -36,6 +36,9 @@ def _get_provider(provider_name: str):
     elif provider_name == "anthropic":
         from src.providers.anthropic_provider import AnthropicProvider
         adapter = AnthropicProvider()
+    elif provider_name == "xai":
+        from src.providers.xai_provider import XAIProvider
+        adapter = XAIProvider()
     else:
         raise ValueError(f"Provider not supported: {provider_name}")
 
@@ -74,6 +77,7 @@ def get_available_models() -> dict[str, list[str]]:
         "openai": "OpenAI",
         "gemini": "Google / Gemini",
         "anthropic": "Anthropic",
+        "xai": "xAI",
     }
     groups: dict[str, list[str]] = {}
     for key, cfg in MODEL_SOURCE_MAP.items():

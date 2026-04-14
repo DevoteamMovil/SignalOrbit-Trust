@@ -444,7 +444,7 @@ def main():
                 df_div = pd.DataFrame(brand_by_model).T.fillna(0)
                 model_cols = [c for c in df_div.columns]
                 df_div["MDI"] = df_div[model_cols].apply(
-                    lambda row: round(row.std() / row.mean() * 100, 1) if row.mean() > 0 else 0,
+                    lambda row: round(row.std() / row.mean() * 100, 1) if row.mean() > 0 else 0.0,
                     axis=1,
                 )
                 df_div = df_div.sort_values("MDI", ascending=False)
@@ -499,11 +499,56 @@ def main():
                     for r in logprob_records
                 ]
                 df_lp = pd.DataFrame(lp_data)
-                lp_by_model = df_lp.groupby("model")["avg_logprob"].mean().round(4)
-                lp_cols = st.columns(len(lp_by_model))
-                for i, (model, avg) in enumerate(lp_by_model.items()):
-                    lp_cols[i].metric(f"{model} avg logprob", f"{avg:.4f}")
-                st.dataframe(df_lp, use_container_width=True)
+                lp_by_model = df_lp.groupby("model")["avg_logprob"].agg(["mean", "min", "max", "count"]).round(4)
+                lp_by_model.columns = ["Avg logprob", "Min", "Max", "Responses"]
+                lp_by_model = lp_by_model.sort_values("Avg logprob", ascending=False)
+
+                # KPI cards
+                lp_cols = st.columns(min(len(lp_by_model), 5))
+                for i, (model, row) in enumerate(lp_by_model.iterrows()):
+                    if i < len(lp_cols):
+                        lp_cols[i].metric(f"{model}", f"{row['Avg logprob']:.4f}",
+                                          help=f"Range: {row['Min']:.4f} → {row['Max']:.4f} over {int(row['Responses'])} responses")
+
+                # Bar chart
+                fig_lp = px.bar(
+                    lp_by_model.reset_index(),
+                    x="model", y="Avg logprob",
+                    color_discrete_sequence=[PRIMARY_COLOR],
+                    error_y=None,
+                )
+                fig_lp.update_layout(**_transparent_layout(
+                    height=320, xaxis_title="", yaxis_title="Avg log-probability",
+                ))
+                st.plotly_chart(fig_lp, use_container_width=True)
+
+                # Full detail table
+                with st.expander("Per-response logprob detail"):
+                    st.dataframe(df_lp.sort_values("avg_logprob", ascending=False), use_container_width=True)
+
+            # ── Export ────────────────────────────────────────
+            st.markdown("---")
+            st.subheader("Export Discovery Data")
+            exp_col1, exp_col2 = st.columns(2)
+            with exp_col1:
+                csv_bytes = pd.DataFrame(filtered).to_csv(index=False).encode("utf-8")
+                st.download_button(
+                    "⬇ Download filtered records (CSV)",
+                    data=csv_bytes,
+                    file_name="signalorbit_discovery.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                )
+            with exp_col2:
+                import json as _json
+                json_bytes = _json.dumps(filtered, ensure_ascii=False, indent=2).encode("utf-8")
+                st.download_button(
+                    "⬇ Download filtered records (JSON)",
+                    data=json_bytes,
+                    file_name="signalorbit_discovery.json",
+                    mime="application/json",
+                    use_container_width=True,
+                )
 
             # ── Audit Trail ───────────────────────────────────
             with st.expander("System Integrity Log (Entity Normalization Trace)"):
@@ -605,6 +650,30 @@ def main():
                     ))
                     st.plotly_chart(fig_mitre, use_container_width=True)
 
+            # ── Export ────────────────────────────────────────
+            st.markdown("---")
+            st.subheader("Export Integrity Data")
+            ie_col1, ie_col2 = st.columns(2)
+            with ie_col1:
+                import json as _json
+                json_bytes = _json.dumps(integrity, ensure_ascii=False, indent=2).encode("utf-8")
+                st.download_button(
+                    "⬇ Download integrity events (JSON)",
+                    data=json_bytes,
+                    file_name="signalorbit_integrity.json",
+                    mime="application/json",
+                    use_container_width=True,
+                )
+            with ie_col2:
+                csv_bytes = pd.DataFrame(integrity).to_csv(index=False).encode("utf-8")
+                st.download_button(
+                    "⬇ Download integrity events (CSV)",
+                    data=csv_bytes,
+                    file_name="signalorbit_integrity.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                )
+
     # ═══════════════════════════════════════════════════════════
     #  TAB 3 — SEARCH REALITY
     # ═══════════════════════════════════════════════════════════
@@ -695,6 +764,30 @@ def main():
                         margin=dict(t=60, b=60, l=60, r=60),
                     )
                     st.plotly_chart(fig_gap, use_container_width=True)
+
+            # ── Export ────────────────────────────────────────
+            st.markdown("---")
+            st.subheader("Export Search Reality Data")
+            gsc_col1, gsc_col2 = st.columns(2)
+            with gsc_col1:
+                csv_bytes = pd.DataFrame(gsc).to_csv(index=False).encode("utf-8")
+                st.download_button(
+                    "⬇ Download GSC data (CSV)",
+                    data=csv_bytes,
+                    file_name="signalorbit_gsc.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                )
+            with gsc_col2:
+                import json as _json
+                json_bytes = _json.dumps(gsc, ensure_ascii=False, indent=2).encode("utf-8")
+                st.download_button(
+                    "⬇ Download GSC data (JSON)",
+                    data=json_bytes,
+                    file_name="signalorbit_gsc.json",
+                    mime="application/json",
+                    use_container_width=True,
+                )
 
 
     # ═══════════════════════════════════════════════════════════

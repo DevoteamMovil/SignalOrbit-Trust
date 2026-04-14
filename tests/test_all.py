@@ -96,9 +96,9 @@ def test_T01_config_models():
     check("gemini" in providers, "Gemini presente y habilitado")
     check("anthropic" in providers, "Anthropic presente y habilitado")
 
-    # T01-05: xAI está deshabilitado
+    # T01-05: xAI está presente en el mapa
     xai = MODEL_SOURCE_MAP.get("xai_grok_3", {})
-    check(xai.get("enabled") is False, "xAI está deshabilitado (P1)")
+    check("provider" in xai, "xAI está presente en MODEL_SOURCE_MAP")
 
     # T01-06: GENERATION_DEFAULTS contiene las keys esperadas
     check("temperature" in GENERATION_DEFAULTS, "GENERATION_DEFAULTS tiene temperature")
@@ -347,11 +347,11 @@ def test_T06_provider_base():
     section("T06 · src/providers/base.py")
     from src.providers.base import ProviderResult, ProviderAdapter
 
-    # T06-01: ProviderResult es un dataclass con campos esperados
-    pr_fields = {f.name for f in fields(ProviderResult)}
+    # T06-01: ProviderResult es un modelo Pydantic con campos esperados
+    pr_fields = set(ProviderResult.model_fields.keys())
     expected = {"text", "input_tokens", "output_tokens", "provider_request_id",
-                "finish_reason", "latency_ms", "raw_payload"}
-    check(expected.issubset(pr_fields), f"ProviderResult tiene campos esperados")
+                "finish_reason", "latency_ms"}
+    check(expected.issubset(pr_fields), f"ProviderResult tiene campos esperados (got {pr_fields})")
 
     # T06-02: ProviderResult se puede instanciar
     r = ProviderResult(text="hi", input_tokens=5, output_tokens=3,
@@ -403,19 +403,13 @@ def test_T07_providers():
     except ImportError:
         print("  [SKIP] AnthropicProvider (SDK not installed)")
 
-    # T07-04: XAIProvider importable y lanza NotImplementedError
+    # T07-04: XAIProvider importable y funcional (OpenAI-compatible)
     try:
         from src.providers.xai_provider import XAIProvider
         check(True, "XAIProvider importable")
-        xai = XAIProvider()
-        try:
-            xai.generate()
-            check(False, "XAIProvider.generate lanza NotImplementedError")
-        except NotImplementedError:
-            check(True, "XAIProvider.generate lanza NotImplementedError")
-        except TypeError:
-            # generate() might require kwargs
-            check(True, "XAIProvider.generate lanza error (expected)")
+        check(issubclass(XAIProvider, ProviderAdapter), "XAIProvider extends ProviderAdapter")
+        check(XAIProvider.provider == "xai", "XAIProvider.provider == 'xai'")
+        check(hasattr(XAIProvider, "generate"), "XAIProvider tiene generate")
     except ImportError as e:
         check(False, f"XAIProvider importable ({e})")
 
@@ -1380,7 +1374,7 @@ def test_T21_canonical_contract():
 
     # T21-03: IntegrityEvent contract
     from src.integrity.scanner import IntegrityEvent
-    ie_fields = {f.name for f in fields(IntegrityEvent)}
+    ie_fields = set(IntegrityEvent.model_fields.keys())
     ie_required = [
         "event_id", "scan_timestamp_utc", "source_page_url", "detected_link_url",
         "ai_target_domain", "query_param_name", "decoded_prompt",

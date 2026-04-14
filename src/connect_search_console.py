@@ -15,6 +15,10 @@ import csv
 from pathlib import Path
 from collections import defaultdict
 
+from src.logger import get_logger
+
+log = get_logger(__name__)
+
 
 # Brand keywords por vertical (diccionario auxiliar para clasificación)
 BRAND_KEYWORDS = {
@@ -85,7 +89,7 @@ def import_from_csv(csv_path: str, output_path: str, site_domain: str = ""):
     """
     path = Path(csv_path)
     if not path.exists():
-        print(f"[ERROR] CSV not found: {csv_path}")
+        log.error("CSV not found", extra={"path": csv_path})
         return
 
     rows = []
@@ -145,7 +149,7 @@ def import_from_csv(csv_path: str, output_path: str, site_domain: str = ""):
             })
 
     if not rows:
-        print("[WARN] No valid rows found in CSV.")
+        log.warning("No valid rows found in CSV", extra={"path": csv_path})
         return
 
     # Write output
@@ -162,15 +166,18 @@ def import_from_csv(csv_path: str, output_path: str, site_domain: str = ""):
     total_clicks = sum(r["clicks"] for r in rows)
     total_impressions = sum(r["impressions"] for r in rows)
 
-    print("═" * 55)
-    print("  SignalOrbit Search Console Connector")
-    print("═" * 55)
-    print(f"  Input: {csv_path}")
-    print(f"  Rows: {len(rows)}")
-    print(f"  Brand: {brand_count} · Non-brand: {nonbrand_count}")
-    print(f"  Total clicks: {total_clicks:,} · Impressions: {total_impressions:,}")
-    print(f"  Output: {output_path}")
-    print("═" * 55)
+    log.info(
+        "Search Console import complete",
+        extra={
+            "input": csv_path,
+            "rows": len(rows),
+            "brand": brand_count,
+            "nonbrand": nonbrand_count,
+            "total_clicks": total_clicks,
+            "total_impressions": total_impressions,
+            "output": output_path,
+        },
+    )
 
 
 def main():

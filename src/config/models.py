@@ -49,11 +49,11 @@ MODEL_SOURCE_MAP = {
         "provider_model_id": "claude-3-5-haiku-latest",
         "enabled": True,
     },
-    # ── xAI (stub, P1) ───────────────────────────────────────
+    # ── xAI ──────────────────────────────────────────────────
     "xai_grok_3": {
         "provider": "xai",
         "provider_model_id": "grok-3",
-        "enabled": False,
+        "enabled": True,
     },
 }
 
